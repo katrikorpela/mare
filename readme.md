@@ -45,41 +45,12 @@ filepath <- system.file("extdata", "NameOfTheDatabase", package="mare")
 
 List of databases:
 
-RDP_Gut.fasta (gut-specific RDP database)
-
-RDP_Gut.udb  (udb-formatted gut-specific RDP database)
-
-RDP.fasta (RDP-database)
-
-RDP.udb (idb-formatted RDP-database)
-
-silva_full_Gut_namedSP.fasta (full-length gut-specific Silva-database including only named species)
-
-silva_full_Gut_namedSP.udb (udb-formatted- full-length gut-specific Silva-database including only named species)
-
-silva_full_Gut.fasta (full-length gut-specific Silva-database)
-
-silva_full_namedSP.fasta (full-length Silva-database including only named species)
-
-silva_full_namedSP.udb (udb-formatted full-length Silva-database including only named species)
 
 silva_full.fasta (full-length Silva-database)
 
 silva_full.udb (udb-formatted full-length Silva-database)
 
-silva_v3v4_Gut_namedSP.fasta (V3-V4 region gut-specific Silva-database including only named species)
 
-silva_v3v4_Gut_namedSP.udb (udb-formatted V3-V4 region gut-specific Silva-database including only named species)
-
-silva_v3v4_Gut.fasta (gut-specific Silva-database including only named species)
-
-silva_v3v4_Gut.udb (udb-formatted V3-V4 region gut-specific Silva-database)
-
-silva_v3v4_namedSP.fasta (V3-V4 region Silva-database including only named species)
-
-silva_v3v4_namedSP.udb (udb-formatted V3-V4 region Silva-database including only named species)
-
-silva_v3v4.fasta (V3-V4 region Silva-database)
 
 AA.txt ("Auxiliary Activities" database from CAZy)
 
