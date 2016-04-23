@@ -34,6 +34,10 @@ When all packages are installed, you can install mare:
 
 devtools::install_github("katrikorpela/mare")
 
+# Citation
+
+Katri Korpela (2016). mare: Microbiota Analysis in R Easily. R package version 1.0. https://github.com/katrikorpela/mare
+
 # Databases
 
 Some reference databases (Silva, RDP, CAZy for carbohydrate utilisation prediction) come with the package to to make getting started easier. To find location of the database, type:
