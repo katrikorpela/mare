@@ -1,7 +1,5 @@
 # mare
 
-https://zenodo.org/badge/21622/katrikorpela/mare.svg
-
 The mare R package is an easy-to-use pipeline for microbiota analysis based on 16S-amplicon reads. It takes the raw reads, creates taxonomic tables, visualises the results, and finally identifies organisms significantly associated with variables of interest. For OTU clustering and taxonomic annotation the package relies on USEARCH (at least version 8.1.1756_i86osx32, possibly also later versions), which you need to obtain first.
 
 For more information see the files mareGuide and mareBackground. To open the files, when you have mare installed, you can run: 
