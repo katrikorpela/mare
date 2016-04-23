@@ -38,6 +38,11 @@ devtools::install_github("katrikorpela/mare")
 
 Katri Korpela (2016). mare: Microbiota Analysis in R Easily. R package version 1.0. https://github.com/katrikorpela/mare
 
+
+[![DOI](https://zenodo.org/badge/21622/katrikorpela/mare.svg)](https://zenodo.org/badge/latestdoi/21622/katrikorpela/mare)
+
+
+
 # Databases
 
 Some reference databases (Silva, RDP, CAZy for carbohydrate utilisation prediction) come with the package to to make getting started easier. To find location of the database, type:
