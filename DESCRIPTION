@@ -1,0 +1,27 @@
+Package: mare
+Title: Microbiota Analysis in R Easily
+Version: 1.0
+Date: 2016-04-13
+Author: Katri Korpela
+Maintainer: Katri Korpela <katri.korpela@helsinki.fi>
+Description: This package processes 16S amplicon reads produced by Illumina MiSeq or HiSeq and visualises and analyses the resulting data. The package utilises the USEARCH software to process the reads.
+Depends: R (>= 3.2.1)
+LazyData: true
+Imports:
+	R2admb,
+	devtools,
+	R2admb,
+	vegan,
+	sp,
+	gstat,
+	Hmisc,
+	beanplot,
+	stringr,
+	MASS,
+	seqinr,	ggplot2,
+	reshape2,
+	fgui,
+	Biostrings,
+	ShortRead,
+	BiocGenerics,
+	glmmADMB
