@@ -45,7 +45,7 @@ Katri Korpela (2016). mare: Microbiota Analysis in R Easily. R package version 1
 
 # Databases
 
-Some reference databases (Silva, RDP, CAZy for carbohydrate utilisation prediction) come with the package to to make getting started easier. To find location of the database, type:
+Some reference databases (Silva, and CAZy for carbohydrate utilisation prediction) come with the package to to make getting started easier. To find location of the database, type:
 filepath <- system.file("extdata", "NameOfTheDatabase", package="mare")
 
 List of databases:
