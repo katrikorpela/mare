@@ -53,7 +53,7 @@ if(pdf){
 pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",covariate,"_", select.by,select, "Boxplot.pdf", sep = ""))
 par(mfrow=c(floor(sqrt(length(taxa))),round(sqrt(length(taxa)))+1),mgp=c(2,0.2,0),mar=c(5,3.5,1,1),tck=-0.01,cex.axis=1.5,cex.lab=1.5)
 for(i in taxa) {
-boxplot(dataset[,i]~dataset[,group],ylab='',xlab=group,outpch=21,axes=F, las=label.direction,
+boxplot(dataset[,i]~dataset[,group],ylab='',xlab="",outpch=21,axes=F, las=label.direction,
 col=c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray')[1:length(unique(dataset[,group]))],
 outbg=c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray')[1:length(unique(dataset[,group]))],
 outcol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
@@ -70,7 +70,7 @@ if (quartz) quartz()
   else x11()
 par(mfrow=c(floor(sqrt(length(taxa))),round(sqrt(length(taxa)))+1),mgp=c(2,0.2,0),mar=c(5,3.5,1,1),tck=-0.01,cex.axis=1.5,cex.lab=1.5)
 for(i in taxa) {
-boxplot(dataset[,i]~dataset[,group],ylab='',xlab=group,outpch=21,axes=F, las=label.direction,
+boxplot(dataset[,i]~dataset[,group],ylab="",xlab="",outpch=21,axes=F, las=label.direction,
 col=c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray')[1:length(unique(dataset[,group]))],
 outbg=c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray')[1:length(unique(dataset[,group]))],
 outcol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
@@ -92,8 +92,8 @@ trse<- data.frame(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),FUN=
 names(trmeans)<-levels(as.factor(dataset[,group]))
 names(trse)<-levels(as.factor(dataset[,group]))    
 for(i in rownames(trmeans)){ 
-plot(unlist(trmeans[i,]),type="h",lwd=15,lend=1,axes=F,ylab="",xlab=group,
-ylim=c(0,max(unlist(1.05*trmeans[i,])+unlist(trse[i,]))),
+plot(unlist(trmeans[i,]),type="h",lwd=15,lend=1,axes=F,ylab="",xlab="",
+ylim=c(0,max(unlist(1.05*trmeans[i,])+unlist(trse[i,]),na.rm=T)),
 xlim=c(0.5,ncol(trmeans)+0.5),
 col=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
 lines(unlist(trmeans[i,]-(0.001*max(unlist(1.05*trmeans[i,])))),type="h",lwd=14,lend=1,
@@ -120,8 +120,8 @@ trse<- data.frame(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),FUN=
 names(trmeans)<-levels(as.factor(dataset[,group]))
 names(trse)<-levels(as.factor(dataset[,group]))    
 for(i in rownames(trmeans)){ 
-plot(unlist(trmeans[i,]),type="h",lwd=15,lend=1,axes=F,ylab="",xlab=group,
-ylim=c(0,max(unlist(1.05*trmeans[i,])+unlist(trse[i,]))),
+plot(unlist(trmeans[i,]),type="h",lwd=15,lend=1,axes=F,ylab="",xlab="",
+ylim=c(0,max(unlist(1.05*trmeans[i,])+unlist(trse[i,]),na.rm=T)),
 xlim=c(0.5,ncol(trmeans)+0.5),#col=c(1:ncol(trmeans)),
 col=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
 lines(unlist(trmeans[i,]-(0.001*max(unlist(1.05*trmeans[i,])))),type="h",lwd=14,lend=1,
@@ -148,7 +148,7 @@ barplot(as.matrix(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean
 col=(c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')),
 legend=T,args.legend=list(x=-4,text.font=3,bty="n"),
-names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab=group,
+names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab="",
 ylab="% of total microbiota")
 dev.off()
 par(op)}
@@ -159,7 +159,7 @@ barplot(as.matrix(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean
 col=(c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')),
 legend=T,args.legend=list(x=-4,text.font=3,bty="n"),
-names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab=group,
+names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab="",
 ylab="% of total microbiota")
 par(op)
 }
@@ -169,7 +169,7 @@ if (quartz) quartz()
   else x11()
   par(mfrow=c(floor(sqrt(length(taxa))),round(sqrt(length(taxa)))+1),mgp=c(2,0.5,0),mar=c(5,3.5,1,1),tck=-0.01,cex.axis=1.5,cex.lab=1.5)
 for(i in taxa) {
-beanplot::beanplot(dataset[,i]~dataset[,group],ll=0.1,ylab=i,xlab=group,
+beanplot::beanplot(dataset[,i]~dataset[,group],ll=0.1,ylab=i,las=label.direction,xlab="",
 col=list(c('skyblue','royalblue','royalblue','royalblue'),
          c('yellowgreen','olivedrab4','olivedrab4','olivedrab4'),
           c('pink','red','red','red'),
@@ -184,7 +184,7 @@ if(pdf){
 pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",covariate,"_", select.by,select, "Beanplot.pdf", sep = ""))
   par(mfrow=c(floor(sqrt(length(taxa))),round(sqrt(length(taxa)))+1),mgp=c(2,0.2,0),mar=c(5,3.5,1,1),tck=-0.01,cex.axis=1.5,cex.lab=1.5)
 for(i in taxa) {
-beanplot::beanplot(dataset[,i]~dataset[,group],ll=0.1,ylab=i,las=label.direction,
+beanplot::beanplot(dataset[,i]~dataset[,group],ll=0.1,ylab=i,las=label.direction,xlab="",
 col=list(c('skyblue','royalblue','royalblue','royalblue'),
          c('yellowgreen','olivedrab4','olivedrab4','olivedrab4'),
           c('pink','red','red','red'),
