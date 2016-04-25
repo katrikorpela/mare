@@ -8,6 +8,12 @@ browseURL(system.file("mareGuide.pdf", package = "mare"))
 
 browseURL(system.file("mareBackground.pdf", package = "mare"))
 
+# Citation
+
+Katri Korpela (2016). mare: Microbiota Analysis in R Easily. R package version 1.0. https://github.com/katrikorpela/mare
+[![DOI](https://zenodo.org/badge/21622/katrikorpela/mare.svg)](https://zenodo.org/badge/latestdoi/21622/katrikorpela/mare)
+
+
 # Installation
 
 First install the required packages:
@@ -34,14 +40,41 @@ When all packages are installed, you can install mare:
 
 devtools::install_github("katrikorpela/mare")
 
-# Citation
-
-Katri Korpela (2016). mare: Microbiota Analysis in R Easily. R package version 1.0. https://github.com/katrikorpela/mare
 
 
-[![DOI](https://zenodo.org/badge/21622/katrikorpela/mare.svg)](https://zenodo.org/badge/latestdoi/21622/katrikorpela/mare)
+# Functions
 
+Blast Creates a BLAST-based taxonomic table
 
+CAZy Does carbohydrate enzyme abundance predictions based on the species table
+
+ChangeTest Tests for differences between groups or associations with covariates in the change of bacterial abundances from one time point to another
+
+CommonTaxa Identifies the most abundant and common taxa in the dataset
+
+CopyFiles Copies the taxonomic tables and metadata to a new folder for analysis
+
+CovariatePlot Plots the selected bacterial taxa against a covariate
+
+CovariateTest Tests for associations between the bacterial taxa and a covariate
+
+FormatRefDB Formats a reference database from fasta to UDB-format
+
+GroupPlot Plots group comparisons
+
+GroupTest Tests for differences between groups in bacterial abundances
+
+mareGUI Graphical user interface for mare
+
+Organise Organises the taxonomic tables based on the metadata file
+
+PCoA Pricipal Coordinates Analysis
+
+ProcessReads Processes the sequencing reads
+
+Simple A short-cut function to format the database, process the reads and create taxonomic tables
+
+TaxonomicTable Creates taxonomic tables
 
 # Databases
 
