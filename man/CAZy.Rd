@@ -12,7 +12,7 @@ CAZy(species)
 
 \arguments{
   \item{species}{
-The species-level taxonomic table.
+The organised species-level taxonomic table.
 }
 }
 
