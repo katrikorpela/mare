@@ -142,10 +142,10 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
                 group, compare.to, "_", select.by, select, "_Barplot.pdf", 
                 sep = ""))
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                1), mgp = c(2, 0.5, 0), mar = c(5, 3.5, 1, 1), tck = -0.01, 
+                1), mgp = c(2, 0.5, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, 
                 cex.axis = 1.5, cex.lab = 1.5)
             for (i in sig) {
-                boxplot(dataset2[, i] ~ dataset2[, group], ylab = i, xlab = group, las = label.direction, 
+                boxplot(dataset2[, i] ~ dataset2[, group], ylab = i, xlab = "", las = label.direction, 
                   col = c("skyblue", "yellowgreen", "pink", "turquoise2", "plum", 
                     "darkorange", "lightyellow", "gray")[1:length(unique(dataset2[, 
                     group]))], outpch = 21, outbg = c("skyblue", "yellowgreen", 
@@ -169,11 +169,11 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
                 group, compare.to, "_", select.by, select, "_Beanplot.pdf", 
                 sep = ""))
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                1), mgp = c(2, 0.5, 0), mar = c(5, 3.5, 1, 1), tck = -0.01, 
+                1), mgp = c(2, 0.5, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, 
                 cex.axis = 1.5, cex.lab = 1.5)
             for (i in sig) {
-                tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, group], las = label.direction,
-                  ll = 0.1, ylab = i, xlab = group, col = list(c("skyblue", 
+                tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, group],xlab="", las = label.direction,
+                  ll = 0.1, ylab = i, col = list(c("skyblue", 
                     "royalblue", "royalblue", "royalblue"), c("yellowgreen", 
                     "olivedrab4", "olivedrab4", "olivedrab4"), c("pink", "red", 
                     "red", "red"), c("turquoise2", "turquoise4", "turquoise4", 
@@ -189,10 +189,10 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
         
         quartz()
         par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-            1), mgp = c(2, 0.5, 0), mar = c(5, 3.5, 1, 1), tck = -0.01, cex.axis = 1.5, 
+            1), mgp = c(2, 0.5, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, cex.axis = 1.5, 
             cex.lab = 1.5)
         for (i in sig) {
-            boxplot(dataset2[, i] ~ dataset2[, group], ylab = i, xlab = group, las = label.direction,
+            boxplot(dataset2[, i] ~ dataset2[, group], ylab = i,xlab="", las = label.direction,
                 col = c("skyblue", "yellowgreen", "pink", "turquoise2", "plum", 
                   "darkorange", "lightyellow", "gray")[1:length(unique(dataset2[, 
                   group]))], outpch = 21, outbg = c("skyblue", "yellowgreen", 
@@ -212,11 +212,11 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
         }
         quartz()
         par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-            1), mgp = c(2, 0.5, 0), mar = c(5, 3.5, 1, 1), tck = -0.01, cex.axis = 1.5, 
+            1), mgp = c(2, 0.5, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, cex.axis = 1.5, 
             cex.lab = 1.5)
         for (i in sig) {
-            tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, group], las = label.direction,
-                ll = 0.1, ylab = i, xlab = group, col = list(c("skyblue", "royalblue", 
+            tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, group],xlab="", las = label.direction,
+                ll = 0.1, ylab = i, col = list(c("skyblue", "royalblue", 
                   "royalblue", "royalblue"), c("yellowgreen", "olivedrab4", 
                   "olivedrab4", "olivedrab4"), c("pink", "red", "red", "red"), 
                   c("turquoise2", "turquoise4", "turquoise4", "turquoise4"), 

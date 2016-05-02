@@ -4,11 +4,14 @@ function(taxa, group = NULL, taxonomic.table, meta, readcount.cutoff = 0,
          smooth.method ='loess',select.by = NULL, select = NULL, pdf = F, quartz = T, label.direction = 1){
 
   taxatable <- read.delim(taxonomic.table)
+  taxatable <- taxatable[,taxa]
   names(taxatable)<-sapply(names(taxatable),function(x) gsub('_NA', '.',x))
   names(taxatable) <- sapply(names(taxatable),function(x) strsplit(x,split='_')[[1]][length(strsplit(x,split='_')[[1]])])
- 
-  taxa <- sapply(taxa,function(x) gsub('_NA', '.',x))
-  taxa <- sapply(taxa,function(x) strsplit(x,split='_')[[1]][length(strsplit(x,split='_')[[1]])])
+  names(taxatable)[names(taxatable)==names(table(names(taxatable))[table(names(taxatable))>1])] <- paste(names(taxatable)[names(taxatable)==names(table(names(taxatable))[table(names(taxatable))>1])],c(1:length(names(taxatable)[names(taxatable)==names(table(names(taxatable))[table(names(taxatable))>1])])),sep="")
+  taxa <- names(taxatable)
+  #taxa <- sapply(taxa,function(x) gsub('_NA', '.',x))
+  #taxa <- sapply(taxa,function(x) strsplit(x,split='_')[[1]][length(strsplit(x,split='_')[[1]])])
+   #taxa[taxa==names(table(taxa)[table(taxa)>1])] <- paste(taxa[taxa==names(table(taxa)[table(taxa)>1])],c(1:length(taxa[taxa==names(table(taxa)[table(taxa)>1])])),sep="")
   
   meta <- read.delim(meta)
   dataset <- data.frame(meta,(taxatable/meta$ReadCount)*100)
