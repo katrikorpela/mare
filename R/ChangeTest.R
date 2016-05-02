@@ -123,7 +123,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
         group_test$taxon <- rownames(group_test)
       for(i in levels(dataset$G)){
       for(j in rownames(group_test)){
-        group_test[j,paste("Mean",i,sep="_")] <-  mean(dataset[dataset$G==i,j]/dataset$ReadCount[dataset$G==i])
+        group_test[j,paste("Mean",i,sep="_")] <-  mean(dataset[dataset$G==i,j])
         }}
     for(i in levels(dataset$G)[levels(dataset$G)!= compare.to]) {
       group_test[,paste("Difference",i,sep="_")] <- abs(group_test[,paste("Mean",i,sep="_")] - group_test[,paste("Mean",compare.to,sep="_")])
@@ -133,7 +133,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
             sep = ""), quote = F, row.names = F, sep = "\t")
    
         if (length(sig) > 0) {     
-        taxa2 <- deltataxa
+        taxa2 <- deltataxa[,names(taxa)]
         names(taxa2) <- sapply(names(taxa2), function(x) gsub("_NA", ".", x))
         names(taxa2) <- sapply(names(taxa2), function(x) gsub("_1", ".", x))
         names(taxa2) <- sapply(names(taxa2), function(x) gsub("_2", ".", x))
@@ -146,8 +146,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
         dataset2 <- dataset2[dataset2$ReadCount > readcount.cutoff, ]
         if (length(select.by) != 0) {
             dataset2$selection <- dataset2[, select.by]
-            dataset2 <- dataset2[dataset2$selection == select & !is.na(dataset2$selection), 
-                ]
+            dataset2 <- dataset2[dataset2$selection == select & !is.na(dataset2$selection), ]
             dataset2[, group] <- dataset2[, group][drop = T]
         }
         
@@ -156,7 +155,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                   group, compare.to, "_", select.by, select, "_Boxplot.pdf", 
                   sep = ""))
                 par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                  1), mgp = c(3, 0.5, 0), mar = c(5, 5, 1, 1), tck = -0.01, 
+                  1), mgp = c(3.5, 0.5, 0), mar = c(3, 5, 1, 1), tck = -0.01, 
                   cex.axis = 1.5, cex.lab = 1.5)
                 for (i in sig) {
                   boxplot(dataset2[, i] ~ paste(dataset2[dataset2[, time] != 
@@ -183,7 +182,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                   group, compare.to, "_", select.by, select, "_Beanplot.pdf", 
                   sep = ""))
                 par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                  1), mgp = c(3, 0.5, 0), mar = c(3.5, 5, 1, 1), tck = -0.01, 
+                  1), mgp = c(2, 0.5, 0), mar = c(3, 3.5, 1, 1), tck = -0.01, 
                   cex.axis = 1.5, cex.lab = 1.5)
                 for (i in sig) {
                   tryCatch(beanplot::beanplot(dataset2[, i] ~ paste(dataset2[, 
@@ -204,7 +203,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
             
             quartz()
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                1), mgp = c(3, 0.5, 0), mar = c(5, 5, 1, 1), tck = -0.01, 
+                1), mgp = c(3.5, 0.5, 0), mar = c(3, 5, 1, 1), tck = -0.01, 
                 cex.axis = 1.5, cex.lab = 1.5)
             for (i in sig) {
                 boxplot(dataset2[, i] ~ paste(dataset2[dataset2[, time] != 
@@ -228,7 +227,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
             }
             quartz()
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                1), mgp = c(3, 0.5, 0), mar = c(3.5, 5, 1, 1), tck = -0.01, 
+                1), mgp = c(2, 0.5, 0), mar = c(3, 3.5, 1, 1), tck = -0.01, 
                 cex.axis = 1.5, cex.lab = 1.5)
             for (i in sig) {
                 tryCatch(beanplot::beanplot(dataset2[, i] ~ paste(dataset2[, 
