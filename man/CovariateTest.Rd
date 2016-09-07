@@ -18,16 +18,16 @@ ChangeTest finds differences between groups in microbial changes, or correlation
 CovariateTest(taxonomic.table, meta, covariate, readcount.cutoff = 0, 
     confounders = NULL, subject.ID = NULL, outlier.cutoff = 3, p.cutoff = 0.05, 
     group = NULL, zinf.cutoff = 0, select.by = NULL, select = NULL, pdf = F, 
-    min.prevalence = 0)
+    min.prevalence = 0, min.abundance = 0, quartz = T)
 
 GroupTest(taxonomic.table, meta, group, compare.to = NULL, readcount.cutoff = 0, confounders = NULL, 
     subject.ID = NULL, outlier.cutoff = 3, p.cutoff = 0.05, zinf.cutoff = 0, 
-    select.by = NULL, select = NULL, pdf = F,  min.prevalence = 0, label.direction = 1)
+    select.by = NULL, select = NULL, pdf = F,  min.prevalence = 0, label.direction = 1, min.abundance = 0, quartz = T)
     
 ChangeTest(taxonomic.table, meta,  group = NULL, compare.to = NULL, 
     covariate = NULL, readcount.cutoff = 0, confounders = NULL, subject.ID, time,
     outlier.cutoff = 3, p.cutoff = 0.05, select.by = NULL, select = NULL, pdf = F, 
-    consecutive = T, min.prevalence = 0, label.direction = 1)  
+    consecutive = T, min.prevalence = 0, label.direction = 1, min.abundance = 0, quartz = T)  
 }
 \arguments{
   \item{taxonomic.table}{
@@ -65,6 +65,9 @@ P-value cut-off for selecting which taxa are displayed in the figures.
 }
   \item{min.prevalence}{
 Minimum acceptable prevalence of a taxon. Taxa occurring less frequently will be ignored.
+}
+  \item{min.abundance}{
+Minimum acceptable relative abundance of a taxon. Taxa occurring at a lower relative abundance will be considered absent when calculating prevalence.
 }
   \item{select.by}{
 Name of a variable in the metadata file by which a subset will be selected for plotting.

@@ -9,8 +9,7 @@ The function processes the forward reads. It trims the primer sequences and trun
 }
 \usage{
 Simple(forward.reads = NULL, forward.primer = NULL, name.separator = "_", 
-    folder.name = "", usearch.path, refDB, gut.specific = F, 
-    taxman = F, named.species = F)
+    folder.name = "", usearch.path, refDB)
 }
 
 \arguments{
@@ -27,21 +26,10 @@ Character that separates the sample name in the beginning of the read files.
 Name for the new folder where the processed reads are written. 
 } 
   \item{refDB}{
-The reference database in fasta format. This should either be the reference RDP database 
-(http://drive5.com/usearch/manual/utax_downloads.html.) or a reference database from 
-Taxman (http://www.ibi.vu.nl/programs/taxmanwww/).
+The reference database in fasta format, produced by FormatRefDB-function or from mare.
 }
   \item{usearch.path}{
 Directory of the USEARCH program.
-}
-  \item{gut.specific}{
-TRUE if you want a gut-specific database.
-}
-  \item{taxman}{
-TRUE if your database is from Taxman.
-}
-  \item{named.species}{
-TRUE if you want to restrict the database to named species.
 }
 }
 

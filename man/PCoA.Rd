@@ -29,7 +29,7 @@ Name of the grouping variable.
 Which principal components should be shown? Defaults to the first two components.
 }
   \item{background.variable}{
-Name of the continuous variable to be shown as the background colour.
+Name of the continuous variable from the metadata file or a bacterial taxon to be shown as the background colour.
 }
   \item{legendplace}{
 Place of the group legend in the figure. Options are "bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right" and "center".
@@ -51,6 +51,10 @@ Plot the figure into a quartz device (default). If your OS does not support quar
 }
 }
 
+\value{
+Returns a table with correlations of the bacterial taxa with the selected principal coordinates and p-values of the correlations.
+}
+
 \author{
 Katri Korpela
 }
@@ -61,12 +65,12 @@ Katri Korpela
 #fewer than 2000 reads, showing differences between treatment groups, and the OTU 
 #richness as the background colour.	Save the plot as PDF.
 
-PCoA(taxonomic.table = 'organised_genus_table.txt',
-     meta = 'meta.txt', 
-     group = 'Treatment', 
-     background.variable = 'Richness', 
-     readcount.cutoff = 2000,
-     pdf = T)
+pctable <- PCoA(taxonomic.table = 'organised_genus_table.txt',
+                meta = 'meta.txt', 
+                group = 'Treatment', 
+                background.variable = 'Richness', 
+                readcount.cutoff = 2000,
+                pdf = T)
 	
 }
 }
