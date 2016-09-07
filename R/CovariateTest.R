@@ -6,6 +6,8 @@ CovariateTest <- function(taxonomic.table, meta, covariate, readcount.cutoff = 0
     metadata <- read.delim(meta)
     taxa <- read.delim(taxonomic.table)
     taxa <- taxa[, colSums(taxa/rowSums(taxa) > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
+    if(ncol(taxa)==0) print("No taxa that fullfill the abundance and prevalence criteria!")
+    if(ncol(taxa)>0) {
     taxa <- taxa[metadata$ReadCount > readcount.cutoff, ]
     metadata <- metadata[metadata$ReadCount > readcount.cutoff, ]
     
@@ -231,3 +233,4 @@ CovariateTest <- function(taxonomic.table, meta, covariate, readcount.cutoff = 0
     }
             return(covariate_test)
 } 
+}
