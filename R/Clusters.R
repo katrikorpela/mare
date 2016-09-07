@@ -1,8 +1,10 @@
-Clusters <- function(taxonomic.table, meta, N.taxa = NULL, minimum.correlation = 0.5, 
-                               minimum.network = 1,  cluster.similarity = 1, quartz = T){
+Clusters <- function(taxonomic.table, meta, N.taxa = NULL,  readcount.cutoff = 0,
+                     minimum.correlation = 0.5, minimum.network = 1,  cluster.similarity = 1, 
+                     quartz = T, pdf = F){
 
 taxatable <- read.delim(taxonomic.table)
 meta <- read.delim(meta)
+taxatable <- taxatable[metadata$ReadCount > readcount.cutoff, ]
 taxatable <- taxatable/meta$ReadCount
 pt2 <- function(q,df,log.p=F) 2*pt(-abs(q),df,log.p=log.p)
 if (length(N.taxa) == 0) N.taxa = ncol(taxatable)
@@ -32,6 +34,20 @@ spnames <- sapply(spnames, function(x) gsub("_5", ".", x))
 classnames <- sapply(spnames, function(x) strsplit(x, split = "_", fixed = T)[[1]][2])
 spnames <- sapply(spnames, function(x) strsplit(x, split = "_", 
             fixed = T)[[1]][length(strsplit(x, split = "_", fixed = T)[[1]])])
+clusters <- hclust(as.dist(1-g2.cor),"ward.D2")
+
+if (pdf){
+pdf("ClusterNetworks.pdf") 
+plot(clusters, xlab="", ylab="",labels=spnames,xlab=""); abline(h=cluster.similarity, lty=2, col="gray")
+qgraph::qgraph(g2.cor2,vsize=5,rescale=T,labels=substr(spnames,start=1,stop=4),layout="spring",diag=F,
+       legend.cex=0.5,label.prop=0.99,groups=classnames,min=0.2,
+       color=c("skyblue", "yellowgreen", "pink", "turquoise2", "plum", 
+                    "darkorange", "lightyellow", "gray","royalblue", 
+                    "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
+                    "lightyellow4", "black"))
+
+  dev.off()  
+} 
 
 if (quartz) quartz()
 qgraph::qgraph(g2.cor2,vsize=5,rescale=T,labels=substr(spnames,start=1,stop=4),layout="spring",diag=F,
@@ -40,9 +56,9 @@ qgraph::qgraph(g2.cor2,vsize=5,rescale=T,labels=substr(spnames,start=1,stop=4),l
                     "darkorange", "lightyellow", "gray","royalblue", 
                     "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
                     "lightyellow4", "black"))
+if (quartz) quartz() 
+plot(clusters, xlab="", ylab="",labels=spnames,xlab=""); abline(h=cluster.similarity, lty=2, col="gray")
 
-clusters <- hclust(as.dist(1-g2.cor),"ward.D2")
-if (quartz) quartz(); plot(clusters, xlab="", ylab="",labels=spnames,xlab=""); abline(h=cluster.similarity, lty=2, col="gray")
 clus<-cutree(clusters,h=cluster.similarity)
 networks <- data.frame(meta,taxatable)
 for(i in names(table(clus)[table(clus)>1])) networks[,paste('cluster',i,sep="")] <- rowMeans(networks[, names(clus)[clus==i]],na.rm=T)
