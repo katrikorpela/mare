@@ -3,9 +3,10 @@ Clusters <- function(taxonomic.table, meta, N.taxa = NULL,  readcount.cutoff = 0
                      quartz = T, pdf = F){
 
 taxatable <- read.delim(taxonomic.table)
-meta <- read.delim(meta)
+metadata <- read.delim(meta)
+taxatable <- taxatable/metadata$ReadCount
 taxatable <- taxatable[metadata$ReadCount > readcount.cutoff, ]
-taxatable <- taxatable/meta$ReadCount
+
 pt2 <- function(q,df,log.p=F) 2*pt(-abs(q),df,log.p=log.p)
 if (length(N.taxa) == 0) N.taxa = ncol(taxatable)
 vars <- c(rev(names(colSums(taxatable,na.rm=T)[order(colSums(taxatable,na.rm=T))])))[1:N.taxa]
@@ -13,7 +14,8 @@ gs<-taxatable[,vars]
 n<-nrow(gs)
 df<-n-2
 tgs <-data.frame(t(scale(gs)))
-g2.cor<-cor(t(tgs[,1:n]),method="spearman",use="pairwise.complete.obs")
+g2.cor<-cor(t(tgs),method="spearman",use="pairwise.complete.obs")
+g2.cor[is.na(g2.cor)] <- 0
 g2.tstat<-g2.cor*sqrt((n-2)/(1-g2.cor^2))#t = r*sqrt((n-2)/(1-r^2))
 g2.p<-pt2(g2.tstat,df)
 g2.adjp <- p.adjust(g2.p,method="fdr")
@@ -24,7 +26,7 @@ g2.cor2<-g2.cor2[vegan::specnumber(g2.cor2)>minimum.network,vegan::specnumber(g2
 g2.cor2<-g2.cor2[vegan::specnumber(g2.cor2)>minimum.network,vegan::specnumber(g2.cor2)>minimum.network]
 g2.cor2<-g2.cor2[vegan::specnumber(g2.cor2)>minimum.network,vegan::specnumber(g2.cor2)>minimum.network]
 
-spnames <- rownames(g2.cor)
+spnames <- rownames(g2.cor2)
 spnames <- sapply(spnames, function(x) gsub("_NA", ".", x))
 spnames <- sapply(spnames, function(x) gsub("_1", ".", x))
 spnames <- sapply(spnames, function(x) gsub("_2", ".", x))
@@ -34,11 +36,12 @@ spnames <- sapply(spnames, function(x) gsub("_5", ".", x))
 classnames <- sapply(spnames, function(x) strsplit(x, split = "_", fixed = T)[[1]][2])
 spnames <- sapply(spnames, function(x) strsplit(x, split = "_", 
             fixed = T)[[1]][length(strsplit(x, split = "_", fixed = T)[[1]])])
-clusters <- hclust(as.dist(1-g2.cor),"ward.D2")
+
+clusters <- hclust(as.dist(1-g2.cor2),"ward.D2")
 
 if (pdf){
 pdf("ClusterNetworks.pdf") 
-plot(clusters, xlab="", ylab="",labels=spnames,xlab=""); abline(h=cluster.similarity, lty=2, col="gray")
+plot(clusters, ylab="",labels=spnames,xlab=""); abline(h=cluster.similarity, lty=2, col="gray")
 qgraph::qgraph(g2.cor2,vsize=5,rescale=T,labels=substr(spnames,start=1,stop=4),layout="spring",diag=F,
        legend.cex=0.5,label.prop=0.99,groups=classnames,min=0.2,
        color=c("skyblue", "yellowgreen", "pink", "turquoise2", "plum", 
@@ -50,14 +53,16 @@ qgraph::qgraph(g2.cor2,vsize=5,rescale=T,labels=substr(spnames,start=1,stop=4),l
 } 
 
 if (quartz) quartz()
-qgraph::qgraph(g2.cor2,vsize=5,rescale=T,labels=substr(spnames,start=1,stop=4),layout="spring",diag=F,
+qgraph::qgraph(g2.cor2,vsize=5,rescale=T,
+          labels=substr(spnames,start=1,stop=4),layout="spring",diag=F,
        legend.cex=0.5,label.prop=0.99,groups=classnames,min=0.2,
        color=c("skyblue", "yellowgreen", "pink", "turquoise2", "plum", 
                     "darkorange", "lightyellow", "gray","royalblue", 
                     "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
                     "lightyellow4", "black"))
 if (quartz) quartz() 
-plot(clusters, xlab="", ylab="",labels=spnames,xlab=""); abline(h=cluster.similarity, lty=2, col="gray")
+plot(clusters, ylab="",labels=spnames,xlab="") 
+abline(h=cluster.similarity, lty=2, col="gray")
 
 clus<-cutree(clusters,h=cluster.similarity)
 networks <- data.frame(meta,taxatable)
