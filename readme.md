@@ -5,6 +5,7 @@ The mare R package is an easy-to-use pipeline for microbiota analysis based on 1
 For more information see the files mareGuide and mareBackground. To open the files, when you have mare installed, you can run: 
 
 browseURL(system.file("mareGuide.pdf", package = "mare"))
+
 browseURL(system.file("mareBackground.pdf", package = "mare"))
 
 # Citation
@@ -44,22 +45,39 @@ devtools::install_github("katrikorpela/mare")
 # Functions
 
 Blast: Creates a BLAST-based taxonomic table
+
 CAZy: Does carbohydrate enzyme abundance predictions based on the species table
+
 Clusters: Performs clustering of the bacterial taxa and plots a correlation network
+
 ChangeTest: Tests for differences between groups or associations with covariates in the change of bacterial abundances from one time point to another
+
 CommonTaxa: Identifies the most abundant and common taxa in the dataset
+
 CopyFiles: Copies the taxonomic tables and metadata to a new folder for analysis
+
 CorrelationMap: Plots a heatmap of correlations between bacterial taxa and selected variables in the metadata file
+
 CovariatePlot: Plots the selected bacterial taxa against a covariate
+
 CovariateTest: Tests for associations between the bacterial taxa and a covariate
+
 FormatRefDB: Formats a reference database from fasta to UDB-format
+
 GroupPlot: Plots group comparisons
+
 GroupTest: Tests for differences between groups in bacterial abundances
+
 mareGUI: Graphical user interface for mare
+
 Organise: Organises the taxonomic tables based on the metadata file
+
 PCoA: Pricipal Coordinates Analysis
+
 ProcessReads: Processes the sequencing reads
+
 Simple: A short-cut function to format the database, process the reads and create taxonomic tables
+
 TaxonomicTable: Creates taxonomic tables
 
 # Databases
@@ -70,10 +88,15 @@ filepath <- system.file("extdata", "NameOfTheDatabase", package="mare")
 List of databases:
 
 silva_full.fasta (full-length Silva-database)
+
 silva_full.udb (udb-formatted full-length Silva-database)
 
 AA.txt ("Auxiliary Activities" database from CAZy)
+
 CE.txt ("Carbohydrate Esterases" database from CAZy)
+
 GH.txt ("Glycoside Hydrolases" database from CAZy)
+
 GT.txt ("Glycosyl Transferases" database from CAZy)
+
 PL.txt ("Polysaccharide Lyases" database from CAZy)
