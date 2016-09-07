@@ -4,6 +4,8 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
     
     taxa <- read.delim(taxonomic.table)
     taxa <- taxa[, colSums(taxa/rowSums(taxa) > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
+    if(ncol(taxa)==0) print("No taxa that fullfill the abundance and prevalence criteria!")
+    if(ncol(taxa)>0) {
     meta <- read.delim(meta)
     taxa <- taxa[meta$ReadCount > readcount.cutoff, ]
     meta <- meta[meta$ReadCount > readcount.cutoff, ]
@@ -94,8 +96,7 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
     }
     group_test[, 1] <- 1
     group_test <- na.omit(group_test)
-    sig <- rownames(group_test)[sapply(data.frame(t(group_test[, -1])), min) < 
-        p.cutoff]
+    sig <- rownames(group_test)[sapply(data.frame(t(group_test[, -1])), min) < p.cutoff]
     sig <- sapply(sig, function(x) gsub("_NA", ".", x))
     sig <- sapply(sig, function(x) gsub("_1", ".", x))
     sig <- sapply(sig, function(x) gsub("_2", ".", x))
@@ -232,4 +233,5 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
         }
     }
     return(group_test)
+    }
 } 

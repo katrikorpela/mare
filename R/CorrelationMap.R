@@ -4,6 +4,10 @@ CorrelationMap <- function(taxonomic.table, meta, variables, select.by = NULL,
     
 taxa <- read.delim(taxonomic.table)
 taxa <- taxa[, colSums(taxa/rowSums(taxa) > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
+  
+ if(ncol(taxa)==0) print("No taxa that fullfill the abundance and prevalence criteria!")
+  if(ncol(taxa)>0) {
+
 metadata <- read.delim(meta)
 taxa <- taxa[metadata$ReadCount > readcount.cutoff, ]
 metadata <- metadata[metadata$ReadCount > readcount.cutoff, ]
@@ -48,18 +52,20 @@ metadata <- metadata[,variables]
  
 palette(c("black","skyblue","yellowgreen", "turquoise2", "plum", "darkorange", "gray","royalblue", "olivedrab4", "red", 
                       "turquoise4", "purple", "darkorange3", "lightyellow4"))
-if (quartz) 
-  quartz()
-gplots::heatmap.2(cor(log(reltaxa+0.0001),metadata,use="pairwise.complete.obs"),
-                  col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
-          keysize=1,key.xlab = "Correlation",margins=c(10,10),colRow=as.numeric(classnamesN))
 
-if (pdf)
-pdf("CorrelatioMap.pdf")
+if (pdf){
+pdf("CorrelatioMap.pdf");#par(mar=c(20,4,4,20))
  gplots::heatmap.2(cor(log(reltaxa+0.0001),metadata,use="pairwise.complete.obs"),
                   col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
           keysize=1,key.xlab = "Correlation",margins=c(10,10),colRow=as.numeric(classnamesN))
 dev.off()
 }
+if (quartz) 
+  quartz();#par(mar=c(20,4,4,20))
+gplots::heatmap.2(cor(log(reltaxa+0.0001),metadata,use="pairwise.complete.obs"),
+                  col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
+          keysize=1,key.xlab = "Correlation",margins=c(10,10),colRow=as.numeric(classnamesN))
 
+}
+}
     
