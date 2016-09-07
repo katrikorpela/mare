@@ -1,11 +1,10 @@
 ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL, 
     covariate = NULL, readcount.cutoff = 0, confounders = NULL, subject.ID,  time,
     outlier.cutoff = 3, p.cutoff = 0.05, select.by = NULL, select = NULL, pdf = F, 
-    consecutive = T, min.prevalence = 0, label.direction = 1) {
+    consecutive = T, min.prevalence = 0, min.abundance = 0, label.direction = 1) {
     
     taxa <- read.delim(taxonomic.table)
-    taxa <- taxa[, names(colSums(taxa > 0)[colSums(taxa > 0) > (min.prevalence * 
-        nrow(taxa))])]
+  taxa <- taxa[, colSums(taxa/rowSums(taxa) > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
     
     metadata <- read.delim(meta)
     
@@ -29,8 +28,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
         for (k in colnames(deltataxa)) deltataxa[, paste("baseline", k, sep = "")] <- NA
         for (i in names(table(metadata$ID)[table(metadata$ID) > 1])) {
             metadata$time[metadata$ID == i] <- order(metadata$time[metadata$ID == i])
-            for (j in unique(metadata$time[metadata$ID == i][order(metadata$time[metadata$ID == 
-                i])])[-1]) {
+            for (j in unique(metadata$time[metadata$ID == i][order(metadata$time[metadata$ID == i])])[-1]) {
                 for (k in colnames(reltaxa)) {
                   deltataxa[metadata$ID == i & metadata$time == j, k] <- reltaxa[metadata$ID == 
                     i & metadata$time == j, k] - reltaxa[metadata$ID == i & 
@@ -44,7 +42,6 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
     } else {
         for (k in colnames(deltataxa)) deltataxa[, paste("baseline", k, sep = "")] <- NA
         for (i in names(table(metadata$ID)[table(metadata$ID) > 1])) {
-            #metadata$time[metadata$ID == i] <- order(metadata$time[metadata$ID == i])
             for (j in unique(metadata$time[metadata$ID == i][order(metadata$time[metadata$ID == i])])[-1]) {
                 for (k in colnames(reltaxa)) {
                   deltataxa[metadata$ID == i & metadata$time == j, k] <- reltaxa[metadata$ID == 
@@ -244,6 +241,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                     "black")[1:length(unique(dataset2[, group]))]), error = function(e) NULL)
             }
         }
+        return(group_test)
     }
     
     if (length(covariate) != 0) {
@@ -361,12 +359,10 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                   confounders[5], i, paste("baseline", i, sep = "")) != ""]])))$coef[-c(1:(2 + 
                   length(confounders[confounders != ""]))), 4], error = function(e) NULL)
             }
-            for (i in names(covariate_test)[-1]) covariate_test[, i] <- as.numeric(covariate_test[, 
-                i])
+            for (i in names(covariate_test)[-1]) covariate_test[, i] <- as.numeric(covariate_test[, i])
             covariate_test[, 1] <- 1
             covariate_test <- na.omit(covariate_test)
-            sig <- rownames(covariate_test)[covariate_test[, 2] < p.cutoff & 
-                !is.na(covariate_test[, 2])]
+            sig <- rownames(covariate_test)[covariate_test[, 2] < p.cutoff & !is.na(covariate_test[, 2])]
             sig <- sapply(sig, function(x) gsub("_NA", ".", x))
             sig <- sapply(sig, function(x) gsub("_1", ".", x))
             sig <- sapply(sig, function(x) gsub("_2", ".", x))
@@ -377,8 +373,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                 split = "_", fixed = T)[[1]])])
             sig <- as.character(sig)
             names(covariate_test)[-1] <- paste("p",names(covariate_test)[-1],sep="_")
-            covariate_test[, paste("p", covariate, "FDR", sep = "_")] <- p.adjust(covariate_test[, 
-                2], "fdr")
+            covariate_test[, paste("p", covariate, "FDR", sep = "_")] <- p.adjust(covariate_test[,2], "fdr")
             covariate_test$taxon <- rownames(covariate_test)
             write.table(covariate_test, paste(strsplit(taxonomic.table, split = "_")[[1]][3], 
                 "_ChangeTest_", covariate, "_", select.by, select, ".txt", sep = ""), 
@@ -405,10 +400,12 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                   id = covariate))
                 names(df) <- c("x", "variable", "value")
                 p <- ggplot2::ggplot(df, ggplot2::aes(y = value, x = x), environment = environment()) + 
-                  ggplot2::stat_smooth(method = "lm", formula = y ~ x, se = T, 
-                    fill = "skyblue") + ggplot2::facet_wrap(~variable, ncol = floor(sqrt(length(sig))), 
-                  scales = "free") + ggplot2::theme_bw() + ggplot2::xlab(covariate) + 
-                  ggplot2::ylab("Change in relative abundance") + ggplot2::theme(legend.position = "right")
+                  ggplot2::stat_smooth(method = "lm", formula = y ~ x, se = T, fill = "cornflowerblue", color = "gray30", lwd = 0.5) + 
+                  ggplot2::facet_wrap(~variable, ncol = floor(sqrt(length(sig))), scales = "free") + 
+                  ggplot2::theme_bw() + 
+                  ggplot2::xlab(covariate) + 
+                  ggplot2::ylab("Change in relative abundance") + 
+                  ggplot2::theme(legend.position = "right")
                 
                 if (pdf) {
                   pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3], 
@@ -421,7 +418,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                 quartz()
                 plot(p)
             }
-            
+            return(covariate_test)
         }
     }
 }

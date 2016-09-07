@@ -1,5 +1,5 @@
 TaxonomicTableGUI <- function(usearch.path, refDB, annotate.reads = T, 
-    folder.name = "", confidence.cutoff = 0.5) {
+    folder.name = "", confidence.cutoff = 0) {
     
    refDB <- system.file(paste("extdata/",refDB,sep=""),package="mare")
   
@@ -18,7 +18,8 @@ TaxonomicTableGUI <- function(usearch.path, refDB, annotate.reads = T,
     }
     
     system(paste(usearch.path, " -utax ", tobeannotated, " -db ", refDB, " -utax_cutoff ", 
-        confidence.cutoff, " -strand both -utaxout ", wd, "/", folder.name, 
+        confidence.cutoff, 
+        " -strand both -utaxout ", wd, "/", folder.name, 
         "TaxonomicTables/", folder.name, OTU, "taxonomy.txt", sep = ""))
     
     

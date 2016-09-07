@@ -1,9 +1,9 @@
 GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount.cutoff = 0, confounders = NULL, 
     subject.ID = NULL, outlier.cutoff = 3, p.cutoff = 0.05, zinf.cutoff = 0, 
-    select.by = NULL, select = NULL, pdf = F,  min.prevalence = 0, label.direction = 1) {
+    select.by = NULL, select = NULL, pdf = F,  min.prevalence = 0, min.abundance = 0, label.direction = 1) {
     
     taxa <- read.delim(taxonomic.table)
-    taxa <- taxa[, colSums(taxa > 0, na.rm = T) > min.prevalence * nrow(taxa)]
+    taxa <- taxa[, colSums(taxa/rowSums(taxa) > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
     meta <- read.delim(meta)
     taxa <- taxa[meta$ReadCount > readcount.cutoff, ]
     meta <- meta[meta$ReadCount > readcount.cutoff, ]
@@ -47,9 +47,10 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
                 data = na.omit(dataset[, c(group, confounders[1], confounders[2], 
                   confounders[3], confounders[4], confounders[5], i, "ID", 
                   "ReadCount")[c(group, confounders[1], confounders[2], confounders[3], 
-                  confounders[4], confounders[5], i, "ID", "ReadCount") != 
-                  ""]]), admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)))$coef[-c(1:(1 + 
-                length(confounders[confounders != ""]))), 4], error = function(e) NULL)
+                  confounders[4], confounders[5], i, "ID", "ReadCount") != ""]]), 
+                admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)))$coef[paste("as.factor(",group,")",names(group_test),sep="")[-1],4],
+                #[-c(1:(1 + length(confounders[confounders != ""]))), 4], 
+                error = function(e) NULL)
         }
         for (i in names(taxa)[colSums(taxa > 0, na.rm = T) < (zinf.cutoff * 
             nrow(taxa))]) {
@@ -62,20 +63,21 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
                   group, "ReadCount")[c(group, confounders[1], confounders[2], 
                   confounders[3], confounders[4], confounders[5], i, "ID", 
                   group, "ReadCount") != ""]]), zeroInflation = TRUE, admb.opts = glmmADMB::admbControl(shess = F, 
-                  noinit = FALSE)))$coef[-c(1:(1 + length(confounders[confounders != 
-                ""]))), 4], error = function(e) NULL)
+                  noinit = FALSE)))$coef[paste("as.factor(",group,")",names(group_test),sep="")[-1],4],
+                #[-c(1:(1 + length(confounders[confounders != ""]))), 4], 
+                error = function(e) NULL)
         }
     } else {
-        for (i in names(taxa)[colSums(taxa > 0, na.rm = T) > ((zinf.cutoff * 
-            nrow(taxa)) - 1)]) {
+        for (i in names(taxa)[colSums(taxa > 0, na.rm = T) > ((zinf.cutoff * nrow(taxa)) - 1)]) {
             tryCatch(group_test[i, -1] <- summary(MASS::glm.nb(as.formula(paste("round(", 
                 i, "+1)~", confounders[1], "+", confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ as.factor(", group, 
-                ")+", "offset(log(ReadCount))")), data = dataset), control = glm.control(maxit = 5000))$coef[-c(1:(1 + 
-                length(confounders[confounders != ""]))), 4], error = function(e) NULL)
+                ")+", "offset(log(ReadCount))")), data = dataset), 
+                control = glm.control(maxit = 5000))$coef[paste("as.factor(",group,")",names(group_test),sep="")[-1],4],
+                #[-c(1:(1 + length(confounders[confounders != ""]))), 4], 
+                error = function(e) NULL)
         }
-        for (i in names(taxa)[colSums(taxa > 0, na.rm = T) < (zinf.cutoff * 
-            nrow(taxa))]) {
+        for (i in names(taxa)[colSums(taxa > 0, na.rm = T) < (zinf.cutoff *  nrow(taxa))]) {
             tryCatch(group_test[i, -1] <- summary(glmmADMB::glmmadmb(as.formula(paste("round(", 
                 i, ")~", confounders[1], "+", confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ as.factor(", group, 
@@ -84,8 +86,9 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
                   confounders[5], i, group, "ReadCount")[c(group, confounders[1], 
                   confounders[2], confounders[3], confounders[4], confounders[5], 
                   i, group, "ReadCount") != ""]]), zeroInflation = TRUE, admb.opts = glmmADMB::admbControl(shess = F, 
-                noinit = FALSE)))$coef[-c(1:(1 + length(confounders[confounders != 
-                ""]))), 4], error = function(e) NULL)
+                noinit = FALSE)))$coef[paste("as.factor(",group,")",names(group_test),sep="")[-1],4],
+                #[-c(1:(1 + length(confounders[confounders != ""]))), 4], 
+                error = function(e) NULL)
         }
         
     }
@@ -142,8 +145,8 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
                 group, compare.to, "_", select.by, select, "_Barplot.pdf", 
                 sep = ""))
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                1), mgp = c(2, 0.5, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, 
-                cex.axis = 1.5, cex.lab = 1.5)
+                1), mgp = c(2, 0.3, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, 
+                cex.axis = 1.3, cex.lab = 1.5)
             for (i in sig) {
                 boxplot(dataset2[, i] ~ dataset2[, group], ylab = i, xlab = "", las = label.direction, 
                   col = c("skyblue", "yellowgreen", "pink", "turquoise2", "plum", 
@@ -169,8 +172,8 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
                 group, compare.to, "_", select.by, select, "_Beanplot.pdf", 
                 sep = ""))
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                1), mgp = c(2, 0.5, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, 
-                cex.axis = 1.5, cex.lab = 1.5)
+                1), mgp = c(2, 0.3, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, 
+                cex.axis = 1.3, cex.lab = 1.5)
             for (i in sig) {
                 tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, group],xlab="", las = label.direction,
                   ll = 0.1, ylab = i, col = list(c("skyblue", 
@@ -189,7 +192,7 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
         
         quartz()
         par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-            1), mgp = c(2, 0.5, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, cex.axis = 1.5, 
+            1), mgp = c(2, 0.3, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, cex.axis = 1.3, 
             cex.lab = 1.5)
         for (i in sig) {
             boxplot(dataset2[, i] ~ dataset2[, group], ylab = i,xlab="", las = label.direction,
@@ -212,7 +215,7 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
         }
         quartz()
         par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-            1), mgp = c(2, 0.5, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, cex.axis = 1.5, 
+            1), mgp = c(2, 0.3, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, cex.axis = 1.3, 
             cex.lab = 1.5)
         for (i in sig) {
             tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, group],xlab="", las = label.direction,
@@ -228,4 +231,5 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
                   "black")), error = function(e) NULL)
         }
     }
+    return(group_test)
 } 

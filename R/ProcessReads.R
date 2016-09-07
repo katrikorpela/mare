@@ -11,29 +11,39 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
     wd <- paste(getwd(), "/", folder.name, "ProcessedReads/", sep = "")
     
     readnumbers <- data.frame(sample = sapply(as.character(forward.reads), 
-        function(x) strsplit(x, split = "_")[[1]][1]), raw_reads = sapply(forward.reads, 
+        function(x) strsplit(x, split = name.separator)[[1]][1]), raw_reads = sapply(forward.reads, 
         function(x) length(Biostrings::readDNAStringSet(x, format = "fastq"))))
     
     if (length(forward.primer) != 0) {
         for (i in forward.reads) {
             ShortRead::writeFastq(object = Biostrings::trimLRPatterns(Lpattern = forward.primer, 
-                subject = ShortRead::readFastq(i), max.Lmismatch = 3, with.Lindels = T), 
+                subject = ShortRead::readFastq(i), max.Lmismatch = 3, with.Lindels = T, Lfixed = F), 
                 file = paste(wd, sapply(i, function(x) strsplit(x, name.separator, 
-                  fixed = T)[[1]][1]), "_fwd.fastq", sep = ""), mode = "w", 
+                  fixed = F)[[1]][1]), name.separator ,"fwd.fastq", sep = ""), mode = "w", 
                 full = F, compress = F, qualityType = "Auto")
         }
     } else {
         for (i in seq_along(forward.reads)) {
-            system(paste("cp ", forward.reads[i], " ", wd, sapply(forward.reads[i], 
-                function(x) strsplit(x, name.separator, fixed = T)[[1]][1]), 
-                "_fwd.fastq.gz", sep = ""))
+            system(paste("cp ", forward.reads[i], " ", wd, forward.reads[i], sep = ""))
+          
+           #system(paste("cp ", forward.reads[i], " ", wd, sapply(forward.reads[i], 
+            #    function(x) strsplit(x, name.separator, fixed = F)[[1]][1]), 
+            #    name.separator ,"fwd.fastq.gz", sep = ""))
         }
         if (length(list.files(path = wd, pattern = "*.gz$")) > 0) {
-            system(paste("gunzip", " ", wd, "*_fwd.fastq.gz", sep = ""))
+            system(paste("gunzip", " ", wd, "*fastq.gz", sep = ""))
         }
+      # for (i in seq_along(list.files(path=wd, pattern="R1"))) {
+      #system(paste("mv ", wd, forward.reads[i], " " , wd, sapply(forward.reads[i], 
+      #          function(x) strsplit(x, name.separator, fixed = F)[[1]][1]), 
+       #         name.separator ,"fwd.fastq", sep = ""))
+       #}
+          for (i in grep(list.files(path=wd), pattern='R2', inv=T, value=T)) {
+      system(paste("mv ", wd, i, " " , wd, sapply(i, function(x) strsplit(x, name.separator, fixed = F)[[1]][1]), 
+                name.separator ,"fwd.fastq", sep = ""))
+       }
     }
-    trimmed_fwd <- paste(wd, list.files(path = wd, pattern = "_fwd.fastq"), 
-        sep = "")
+    trimmed_fwd <- paste(wd, list.files(path = wd, pattern = "fwd.fastq"),  sep = "")
     
     if (length(reverse.reads) != 0) {
         if (length(reverse.primer) != 0) {
@@ -41,41 +51,44 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
                 ShortRead::writeFastq(Biostrings::trimLRPatterns(Lpattern = reverse.primer, 
                   subject = ShortRead::readFastq(i), max.Lmismatch = 3, with.Lindels = T), 
                   file = paste(wd, sapply(i, function(x) strsplit(x, name.separator, 
-                    fixed = T)[[1]][1]), "_rev.fastq", sep = ""), mode = "w", 
+                    fixed = F)[[1]][1]), name.separator ,"rev.fastq", sep = ""), mode = "w", 
                   full = F, compress = F, qualityType = "Auto")
             }
         } else {
-            for (i in seq_along(reverse.reads)) {
-                system(paste("cp ", reverse.reads[i], " ", wd, sapply(reverse.reads[i], 
-                  function(x) strsplit(x, name.separator, fixed = T)[[1]][1]), 
-                  "_rev.fastq.gz", sep = ""))
-            }
-            system(paste("gunzip", " ", wd, "*_rev.fastq.gz", sep = ""))
+        for (i in seq_along(reverse.reads)) {
+            system(paste("cp ", reverse.reads[i], " ", wd, reverse.reads[i], sep = ""))
         }
-        trimmed_rev <- paste(wd, list.files(path = wd, pattern = "_rev.fastq"), 
-            sep = "")
+        if (length(list.files(path = wd, pattern = "*.gz$")) > 0) {
+            system(paste("gunzip", " ", wd, "*fastq.gz", sep = ""))
+        }
+       for (i in list.files(path=wd, pattern="R2")) {
+      system(paste("mv ", wd, i, " " , wd, sapply(i, 
+                function(x) strsplit(x, name.separator, fixed = F)[[1]][1]), 
+                name.separator ,"rev.fastq", sep = ""))
+       }
+        }
+      trimmed_rev <- paste(wd, list.files(path = wd, pattern = "rev.fastq"),  sep = "")
     }
-    
-    reads <- paste(wd, list.files(path = wd, pattern = "_fwd.fastq"), sep = "")
+    reads <- paste(wd, list.files(path = wd, pattern = "fwd.fastq"), sep = "")
     
     if (merge) {
         for (i in seq_along(trimmed_fwd)) {
             system(paste(usearch.path, " -fastq_mergepairs ", trimmed_fwd[i], 
                 " -reverse ", trimmed_rev[i], " -fastq_minmergelen ", min.merged.length, 
                 " -fastq_minovlen ", min.overlap, " -fastq_maxdiffs ", max.mismatches, 
-                " -fastqout ", strsplit(trimmed_fwd[i], "_", fixed = T)[[1]][1], 
+                " -fastqout ", strsplit(trimmed_fwd[i], name.separator , fixed = F)[[1]][1], 
                 "_merged.fastq", sep = ""))
         }
-        reads <- paste(wd, list.files(path = wd, pattern = "_merged.fastq"), 
+        reads <- paste(wd, list.files(path = wd, pattern = "merged.fastq"), 
             sep = "")
 
     } else if (truncate) {
         for (i in seq_along(trimmed_fwd)) {
             system(paste(usearch.path, " -fastx_truncate ", trimmed_fwd[i], 
                 " -trunclen ", trucation.length, " -fastqout ", strsplit(trimmed_fwd[i], 
-                  "_", fixed = T)[[1]][1], "_truncated.fastq", sep = ""))
+                  name.separator, fixed = T)[[1]][1], name.separator ,"truncated.fastq", sep = ""))
         }
-        reads <- paste(wd, list.files(path = wd, pattern = "_truncated.fastq"), 
+        reads <- paste(wd, list.files(path = wd, pattern = "truncated.fastq"), 
             sep = "")
     
     }
@@ -85,8 +98,8 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
             system(paste(usearch.path, " -fastq_filter ", reads[i], " -fastq_truncqual ", 
                 trunc.quality, " -fastq_maxee ", max.expected.error, " -fastq_minlen ", 
                 min.readlength, " -fastqout ", strsplit(reads[i], split = ".fastq")[[1]][1], 
-                "_filtered.fastq", " -fastaout ", strsplit(reads[i], split = ".fastq")[[1]][1], 
-                "_filtered.fasta", sep = ""))
+                name.separator, "filtered.fastq", " -fastaout ", strsplit(reads[i], split = ".fastq")[[1]][1], 
+                name.separator, "filtered.fasta", sep = ""))
         }
     } else for (i in seq_along(reads)) {
         ShortRead::writeFasta(ShortRead::readFastq(reads[i]), file = paste(strsplit(reads[i], 
@@ -96,18 +109,14 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
     
     system(paste("rm ", wd, "*.fastq", sep = ""))  
     
-    readnumbers$processed_reads <- sapply(list.files(path = wd, pattern = "*.fasta$"), 
-        function(x) length(Biostrings::readDNAStringSet(paste(wd, x, sep = ""), 
-            format = "fasta")))
-    
-    #totalreads <- sum(readnumbers$processed_reads)
-    #if (length(min.read.prevalence) != 0) 
-    #    minprev <- min.read.prevalence else minprev <- 0.0001
+    #readnumbers$processed_reads <- sapply(list.files(path = wd, pattern = "*.fasta$")[seq(2,72,2)], 
+    #    function(x) length(Biostrings::readDNAStringSet(paste(wd, x, sep = ""), 
+    #        format = "fasta")))
     
     for (i in seq_along(reads)) {
         system(paste(usearch.path, " -fastx_truncate ", reads[i], " -trunclen ", 
             readlength, " -fastaout ", paste(strsplit(reads[i], split = ".fasta"), 
-                "equallength.fasta", sep = "_"), sep = ""))
+                "equallength.fasta", sep = name.separator), sep = ""))
     }
     
     truncatedreads <- paste(wd, list.files(path = wd, pattern = "equallength.fasta$"), sep = "")
@@ -132,7 +141,7 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
         system(paste("sed '-es/^>\\(.*\\)/>\\1;barcodelabel=", strsplit(truncatedreads[i], 
             split = "\\_\\ProcessedReads/|\\_|\\ProcessedReads/")[[1]][2], 
             ";/' <", truncatedreads[i], " > ", paste(strsplit(truncatedreads[i], 
-                split = ".fasta"), "labelled.fasta", sep = "_"), sep = ""))
+                split = ".fasta"), "labelled.fasta", sep = name.separator), sep = ""))
     }
     system(paste("rm ", wd, "*equallength.fasta", sep = ""))  
     labelledreads <- paste(wd, list.files(path = wd, pattern = "*labelled.fasta$"), sep = "")
@@ -173,7 +182,7 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
     dict <- Biostrings::PDict(derep, max.mismatch = NA, tb.end = 2)
     for (i in seq_along(labelledreads)) {
         seq <- Biostrings::readDNAStringSet(labelledreads[i])
-        result[, strsplit(labelledreads[i], split = "\\_\\ProcessedReads/|\\_|\\ProcessedReads/")[[1]][2]] <- rowSums(Biostrings::vcountPDict(dict, 
+        result[, strsplit(labelledreads[i], split =  paste("ProcessedReads/|",name.separator,sep=""))[[1]][2]] <- rowSums(Biostrings::vcountPDict(dict, 
             seq))
     }
     
@@ -190,7 +199,7 @@ if (length(list.files(pattern = paste(folder.name, "TaxonomicTables", sep = ""))
         dict <- Biostrings::PDict(derep, max.mismatch = NA, tb.end = 2)
         for (i in seq_along(labelledreads)) {
             seq <- Biostrings::readDNAStringSet(labelledreads[i])
-            result[, strsplit(labelledreads[i], split = "\\_\\ProcessedReads/|\\_|\\ProcessedReads/")[[1]][2]] <- rowSums(Biostrings::vcountPDict(dict, 
+            result[, strsplit(labelledreads[i], split =  paste("ProcessedReads/|",name.separator,sep=""))[[1]][2]] <- rowSums(Biostrings::vcountPDict(dict, 
                 seq))
         }
       write.table(result, paste(wd, "/", folder.name, "TaxonomicTables/", 
@@ -199,7 +208,7 @@ if (length(list.files(pattern = paste(folder.name, "TaxonomicTables", sep = ""))
 
     rownames(readnumbers) <- readnumbers$sample
     for(i in readnumbers$sample) readnumbers[readnumbers$sample==i,"processed_reads"] <- sum(result[,i])#new
-    write.table(readnumbers, "readnumbers.txt", quote = F, row.names = F, sep = "\t")
+    write.table(readnumbers, paste(folder.name, "readnumbers.txt",sep="_"), quote = F, row.names = F, sep = "\t")
     readnumbers$raw_reads <- readnumbers$raw_reads - readnumbers$processed_reads
     
     

@@ -21,28 +21,21 @@ CovariatePlot <- function(meta, taxonomic.table, covariate, taxa, smooth.method 
     df = na.omit(reshape2::melt(dataset[, c(covariate, taxa)], id = c(covariate)))
     names(df) <- c("x", "variable", "value")
     p <- ggplot2::ggplot(df, ggplot2::aes(y = value, x = x), environment = environment()) + 
-        ggplot2::stat_smooth(method = smooth.method, formula = y ~ x, se = T, 
-            fill = "skyblue") + ggplot2::geom_point(pch=20,color="royalblue")+
-      ggplot2::facet_wrap(~variable, ncol = floor(sqrt(length(taxa))), 
-        scales = "free") + ggplot2::theme_bw() + ggplot2::xlab(covariate) + 
-        ggplot2::ylab("Relative abundance (%)") + ggplot2::theme(legend.position = "none")  
-    
+          ggplot2::stat_smooth(method = smooth.method, formula = y ~ x, se = T,color="gray30",  fill = "cornflowerblue") + 
+          ggplot2::geom_point(pch=20,color="gray30")+
+          ggplot2::facet_wrap(~variable, ncol = floor(sqrt(length(taxa))), scales = "free") + 
+          ggplot2::theme_bw() + 
+          ggplot2::xlab(covariate) + 
+          ggplot2::ylab("Relative abundance (%)") + 
+          ggplot2::theme(legend.position = "none",strip.background =  ggplot2::element_rect(color = "white",fill="white"))
+          
     if (quartz) quartz()
     
     plot(p)
     
     if (pdf) {
-        pdf("LinePlot.pdf")
-        
-        df = na.omit(reshape2::melt(dataset[, c(covariate, taxa)], id = c(covariate)))
-        names(df) <- c("x", "variable", "value")
-        p <- ggplot2::ggplot(df, ggplot2::aes(y = value, x = x), environment = environment()) + 
-            ggplot2::stat_smooth(method = smooth.method, formula = y ~ x, se = T, 
-                fill = "skyblue") + ggplot2::geom_point(pch=20,color="royalblue")+
-          ggplot2::facet_wrap(~variable, ncol = floor(sqrt(length(taxa))), 
-            scales = "free") + ggplot2::theme_bw() + ggplot2::xlab(covariate) + 
-            ggplot2::ylab("Relative abundance (%)") + ggplot2::theme(legend.position = "none")
-        plot(p)
+        pdf(paste(covariate,"Plot.pdf",sep=""))
+       plot(p)
         dev.off()
     }
 } 

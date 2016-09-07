@@ -14,7 +14,7 @@ Organise <- function(meta, sample.names, otutable = list.files(pattern = "_otuta
     metadata$Richness <- vegan::specnumber(otu)
     metadata$Diversity <- vegan::diversity(otu, "inv")
     
-    reads <- read.table("readnumbers.txt", header = T, row.names = "sample", 
+    reads <- read.table(list.files(pattern="readnumbers.txt"), header = T, row.names = "sample", 
         check.names = F)
     reads <- reads[rownames(metadata), ]
     metadata$ReadCount <- reads$processed_reads

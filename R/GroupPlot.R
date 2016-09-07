@@ -1,5 +1,4 @@
-GroupPlot <-
-function(taxa, group = NULL, taxonomic.table, meta, readcount.cutoff = 0, 
+GroupPlot <- function(taxa, group = NULL, taxonomic.table, meta, readcount.cutoff = 0, 
          stacked = T, bar = T, box = T, bean = T, covariate = NULL, 
          smooth.method ='loess',select.by = NULL, select = NULL, pdf = F, quartz = T, label.direction = 1){
 
@@ -9,10 +8,7 @@ function(taxa, group = NULL, taxonomic.table, meta, readcount.cutoff = 0,
   names(taxatable) <- sapply(names(taxatable),function(x) strsplit(x,split='_')[[1]][length(strsplit(x,split='_')[[1]])])
   names(taxatable)[names(taxatable)==names(table(names(taxatable))[table(names(taxatable))>1])] <- paste(names(taxatable)[names(taxatable)==names(table(names(taxatable))[table(names(taxatable))>1])],c(1:length(names(taxatable)[names(taxatable)==names(table(names(taxatable))[table(names(taxatable))>1])])),sep="")
   taxa <- names(taxatable)
-  #taxa <- sapply(taxa,function(x) gsub('_NA', '.',x))
-  #taxa <- sapply(taxa,function(x) strsplit(x,split='_')[[1]][length(strsplit(x,split='_')[[1]])])
-   #taxa[taxa==names(table(taxa)[table(taxa)>1])] <- paste(taxa[taxa==names(table(taxa)[table(taxa)>1])],c(1:length(taxa[taxa==names(table(taxa)[table(taxa)>1])])),sep="")
-  
+
   meta <- read.delim(meta)
   dataset <- data.frame(meta,(taxatable/meta$ReadCount)*100)
   dataset <- dataset[dataset$ReadCount>readcount.cutoff,]
@@ -22,7 +18,7 @@ function(taxa, group = NULL, taxonomic.table, meta, readcount.cutoff = 0,
   } 
  dataset[,group]<-dataset[,group][drop=T]
 
- if(length(covariate)!=0){
+if(length(covariate)!=0){
 if(group=='') {
 dataset[,'group']<-1
 group <- 'group'
@@ -152,7 +148,7 @@ col=(c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyel
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')),
 legend=T,args.legend=list(x=-4,text.font=3,bty="n"),
 names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab="",
-ylab="% of total microbiota")
+ylab="% of total microbiota", ylim=c(0,100))
 dev.off()
 par(op)}
 if (quartz) quartz()
@@ -163,7 +159,7 @@ col=(c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyel
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')),
 legend=T,args.legend=list(x=-4,text.font=3,bty="n"),
 names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab="",
-ylab="% of total microbiota")
+ylab="% of total microbiota", ylim=c(0,100))
 par(op)
 }
 

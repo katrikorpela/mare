@@ -157,6 +157,4 @@ for(i in rownames(plsample)){
 rownames(plsample)<-gsub(rownames(plsample),pattern = "[.]", replacement = "-")
 write.table(plsample,"CAZy_table_PolysaccharideLyases.txt",quote=F,sep="\t",row.names=T)
 
-#laita yhteen datat?
-
 } 

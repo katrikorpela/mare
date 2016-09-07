@@ -21,6 +21,19 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL,
         groupvar <- meta[, group]
     }
     
+    pc <- data.frame(taxa,summary(vegan::capscale(taxa ~ 1, distance = "bray"))$sites)
+    pctest <- as.data.frame(matrix(nrow=ncol(taxa),ncol=4))
+    names(pctest) <- c(paste("MDS",components[1],sep=""),
+                        paste("MDS",components[2],sep=""),
+                         paste("MDS",components[1],"p",sep=""),
+                         paste("MDS",components[2],"p",sep=""))
+    rownames(pctest)<-colnames(taxa)
+    for(i in rownames(pctest)) pctest[i,paste("MDS",components[1],sep="")]<-cor(pc[,paste("MDS",components[1],sep="")],pc[,i])
+    for(i in rownames(pctest)) pctest[i,paste("MDS",components[2],sep="")]<-cor(pc[,paste("MDS",components[1],sep="")],pc[,i])
+    for(i in rownames(pctest)) pctest[i,paste("MDS",components[1],"p",sep="")]<-cor.test(pc[,paste("MDS",components[1],sep="")],pc[,i])$p.value
+    for(i in rownames(pctest)) pctest[i,paste("MDS",components[2],"p",sep="")]<-cor.test(pc[,paste("MDS",components[2],sep="")],pc[,i])$p.value
+    return(pctest)
+    
     op <- par(mar = c(3, 3, 1, 1), xpd = T, cex.lab = 1.5, cex.axis = 1.5, 
         mgp = c(1.5, 0.3, 0), tck = -0.01)
     if (length(background.variable) != 0) {
@@ -34,7 +47,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL,
         sp::coordinates(grd) <- ~x + y
         sp::gridded(grd) <- TRUE
         temp <- data.frame(summary(vegan::capscale(taxa ~ 1, distance = "bray"))$sites[, 
-            components], meta)
+            components], meta, taxa)
         names(temp)[c(1, 2)] <- c("MDS1", "MDS2")
         IDW <- gstat::krige(as.formula(paste("log(", background.variable, "+1)~1")), 
             locations = ~MDS1 + MDS2, data = na.omit(temp[, c(background.variable, 

@@ -21,8 +21,8 @@ To analyse your data, first do the pre-processing
 copy the files to a new folder for analysis and organise the data
 (functions CopyFiles and Organise),
 then explore the results by plotting
-(functions PCoA, GroupPlot, CovariatePlot), 
-and finally conduct sigficant testing
+(functions PCoA, GroupPlot, CovariatePlot, Clusters, CorrelationMap), 
+and finally conduct sigficance testing
 (functions GroupTest, CovariateTest, ChangeTest),
 and carbohydrate utilization prediction
 (function CAZy).")
@@ -39,7 +39,7 @@ mgui(SimpleGUI, title = c("Preprocess", "Simple short cut to taxonomic tables"),
 mgui(ProcessReads, title = c("Preprocess", "ProcessReads"), output=NULL, 
      argFilename=list(usearch.path=NULL))
 mgui(TaxonomicTableGUI, title = c("Preprocess", "TaxonomicTable"), output=NULL,
-     argFilename=list(usearch.path=NULL),
+     argFilename=list(usearch.path=NULL),#,refDB=NULL)
      argList=list(refDB=c("RDP.fasta","RDP_Gut.fasta","silva_full.fasta",            
  "silva_full_Gut.fasta", "silva_full_Gut_namedSP.fasta", "silva_full_namedSP.fasta",   
  "silva_v3v4.fasta","silva_v3v4_Gut.fasta","silva_v3v4_Gut_namedSP.fasta","silva_v3v4_namedSP.fasta",
@@ -49,8 +49,10 @@ mgui(CopyFiles, title = c("Preprocess", "CopyFiles"), output=NULL)
 mgui(Organise, title = c("Preprocess", "Organise"), output=NULL)
 fguiNewMenu(c("Plot","SEPARATOR"))
 mgui(PCoA, title = c("Plot", "PCoA"),argFilename=list(taxonomic.table=NULL, meta=NULL,output="m"))
-mgui(GroupPlotGUI, title = c("Plot", "GroupPlot"),argFilename=list(taxonomic.table=NULL, meta=NULL), output="m")
-mgui(CovariatePlotGUI, title = c("Plot", "CovariatePlot"),
+mgui(Clusters, title = c("Plot", "Clusters"),argFilename=list(taxonomic.table=NULL, meta=NULL,output="m"))
+mgui(CorrelationMap, title = c("Plot", "CorrelationMap"),argFilename=list(taxonomic.table=NULL, meta=NULL,output="m"))
+mgui(GroupPlot, title = c("Plot", "GroupPlot"),argFilename=list(taxonomic.table=NULL, meta=NULL), output="m")
+mgui(CovariatePlot, title = c("Plot", "CovariatePlot"),
      argFilename=list(taxonomic.table=NULL, meta=NULL), output="m")
 fguiNewMenu(c("Test","SEPARATOR"))
 mgui(GroupTest, title = c("Test", "GroupTest"),argFilename=list(taxonomic.table=NULL, meta=NULL), output="m")
