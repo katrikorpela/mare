@@ -89,6 +89,10 @@ Direction of the x-axis labels in plots: 1 = horizontal,  2 = vertical.
 }
 }
 
+\value{
+Returns a table with the results.
+}
+
 \author{
 Katri Korpela
 }

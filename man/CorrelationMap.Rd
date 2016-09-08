@@ -49,10 +49,6 @@ Plot the figure into a quartz device (default). If your OS does not support quar
 }
 }
 
-\value{
-Returns a table with correlations of the bacterial taxa with the selected principal coordinates and p-values of the correlations.
-}
-
 \author{
 Katri Korpela
 }

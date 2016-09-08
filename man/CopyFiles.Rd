@@ -7,7 +7,7 @@ Copy the taxonomic tables and move the R session to the new directory
 Creates a new directory, copies the taxonomic tables, OTU table, metadata file and the readnumber file to the new directory, and moves the R session to the new directory. This leaves the processed reads and taxonomic tables intact where they are and allows the further analysis steps to be done in clean new folder.
 }
 \usage{
-CopyFiles(folders = "*TaxonomicTables", files = "*table.txt", meta = NULL, 
+CopyFiles(folders = "*TaxonomicTables", files = "*table.txt", meta = NULL, folder.name = "",
     copy.to)
 }
 \arguments{
@@ -19,6 +19,9 @@ List of files to be copied. Defaults to all files in the specified folders with 
 }
   \item{meta}{
 Metadata file. Should be the name of a text file.
+}
+  \item{folder.name}{
+Folder name that was given to ProcessReads and Taxonomictable functions.
 }
   \item{copy.to}{
 Directory that should be created (not an existing folder!).
