@@ -18,10 +18,13 @@ Imports:
 	beanplot,
 	stringr,
 	MASS,
-	seqinr,	ggplot2,
+	seqinr,
+	ggplot2,
 	reshape2,
 	fgui,
 	Biostrings,
 	ShortRead,
 	BiocGenerics,
-	glmmADMB
+	glmmADMB,
+	gplot,
+	qgraph
