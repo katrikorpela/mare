@@ -87,7 +87,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL,
             axis(side = 1, at = c(3, 47), labels = c("Low", "High"))
             dev.off()
         }
-        if (quartz) quartz()
+        if (quartz) quartz() else x11()
         plot(summary(vegan::capscale(taxa ~ 1, distance = "bray"))$sites[, 
             components[2]] ~ summary(vegan::capscale(taxa ~ 1, distance = "bray"))$sites[, 
             components[1]], type = "n", ylim = (range(ylimit) * 0.94), xlim = (range(xlimit) * 
@@ -141,7 +141,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL,
                   groupvar, method = "bray")$aov.tab[1, 6], sep = ""))
                 dev.off()
             }
-            if (quartz) quartz()
+            if (quartz) quartz() else x11()
             plot(summary(vegan::capscale(taxa ~ 1, distance = "bray"))$sites[, 
                 components[2]] ~ summary(vegan::capscale(taxa ~ 1, distance = "bray"))$sites[, 
                 components[1]], pch = 21, bg = as.factor(groupvar), xlab = paste("Component ", 
@@ -173,7 +173,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL,
                     digits = 2), "%)", sep = ""))
                 dev.off()
             }
-            if (quartz) quartz()
+            if (quartz) quartz() else x11()
             plot(summary(vegan::capscale(taxa ~ 1, distance = "bray"))$sites[, 
                 components[2]] ~ summary(vegan::capscale(taxa ~ 1, distance = "bray"))$sites[, 
                 components[1]], pch = 21, bg = "black", xlab = paste("Component ", 

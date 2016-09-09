@@ -54,14 +54,13 @@ palette(c("black","skyblue","yellowgreen", "turquoise2", "plum", "darkorange", "
                       "turquoise4", "purple", "darkorange3", "lightyellow4"))
 
 if (pdf){
-pdf("CorrelatioMap.pdf");#par(mar=c(20,4,4,20))
+pdf("CorrelatioMap.pdf");
  gplots::heatmap.2(cor(log(reltaxa+0.0001),metadata,use="pairwise.complete.obs"),
                   col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
           keysize=1,key.xlab = "Correlation",margins=c(10,10),colRow=as.numeric(classnamesN))
 dev.off()
 }
-if (quartz) 
-  quartz();#par(mar=c(20,4,4,20))
+if (quartz) quartz() else x11()
 gplots::heatmap.2(cor(log(reltaxa+0.0001),metadata,use="pairwise.complete.obs"),
                   col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
           keysize=1,key.xlab = "Correlation",margins=c(10,10),colRow=as.numeric(classnamesN))

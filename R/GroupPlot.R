@@ -65,8 +65,7 @@ axis(side=2)
 mtext(side=2,text=i,line=1.5,cex=1,font=3)
  }
 dev.off() }
-if (quartz) quartz()
-  else x11()
+if (quartz) quartz() else x11()
 par(mfrow=c(floor(sqrt(length(taxa))),round(sqrt(length(taxa)))+1),mgp=c(2,0.2,0),mar=c(5,3.5,1,1),tck=-0.01,cex.axis=1.5,cex.lab=1.5)
 for(i in taxa) {
 boxplot(dataset[,i]~dataset[,group],ylab="",xlab="",outpch=21,axes=F, las=label.direction,
@@ -110,8 +109,7 @@ axis(side=2,at=pretty(seq(0,max(unlist(trmeans[i,])),max(unlist(trmeans[i,]))/10
      labels=pretty(seq(0,max(unlist(trmeans[i,])),
                       max(unlist(trmeans[i,]))/10),digits=2))}
 dev.off()}  
-if (quartz) quartz()
-  else x11()
+if (quartz) quartz() else x11()
 par(mfrow=c(floor(sqrt(length(taxa))),round(sqrt(length(taxa)))+1),mgp=c(2,0.2,0),mar=c(5,3.5,1,1),tck=-0.01,cex.axis=1.5,cex.lab=1.5)
   palette(c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray','royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
 trmeans<-data.frame(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1]))
@@ -151,8 +149,7 @@ names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab="",
 ylab="% of total microbiota", ylim=c(0,100))
 dev.off()
 par(op)}
-if (quartz) quartz()
-  else x11()
+if (quartz) quartz() else x11()
 op<-par(xpd=T,mar=c(10,20,2,2),cex.axis=1.5,cex.lab=1.5)
 barplot(as.matrix(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1])),
 col=(c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
@@ -164,8 +161,7 @@ par(op)
 }
 
 if(bean){
-if (quartz) quartz()
-  else x11()
+if (quartz) quartz() else x11()
   par(mfrow=c(floor(sqrt(length(taxa))),round(sqrt(length(taxa)))+1),mgp=c(2,0.5,0),mar=c(5,3.5,1,1),tck=-0.01,cex.axis=1.5,cex.lab=1.5)
 for(i in taxa) {
 beanplot::beanplot(dataset[,i]~dataset[,group],ll=0.1,ylab=i,las=label.direction,xlab="",

@@ -52,7 +52,7 @@ qgraph::qgraph(g2.cor2,vsize=5,rescale=T,labels=substr(spnames,start=1,stop=4),l
   dev.off()  
 } 
 
-if (quartz) quartz()
+if (quartz) quartz() else x11()
 qgraph::qgraph(g2.cor2,vsize=5,rescale=T,
           labels=substr(spnames,start=1,stop=4),layout="spring",diag=F,
        legend.cex=0.5,label.prop=0.99,groups=classnames,min=0.2,
@@ -60,7 +60,7 @@ qgraph::qgraph(g2.cor2,vsize=5,rescale=T,
                     "darkorange", "lightyellow", "gray","royalblue", 
                     "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
                     "lightyellow4", "black"))
-if (quartz) quartz() 
+if (quartz) quartz() else x11()
 plot(clusters, ylab="",labels=spnames,xlab="") 
 abline(h=cluster.similarity, lty=2, col="gray")
 

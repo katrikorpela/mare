@@ -1,6 +1,7 @@
 GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount.cutoff = 0, confounders = NULL, 
     subject.ID = NULL, outlier.cutoff = 3, p.cutoff = 0.05, zinf.cutoff = 0, 
-    select.by = NULL, select = NULL, pdf = F,  min.prevalence = 0, min.abundance = 0, label.direction = 1) {
+    select.by = NULL, select = NULL, pdf = F,  min.prevalence = 0, min.abundance = 0, 
+    label.direction = 1, quartz = T) {
     
     taxa <- read.delim(taxonomic.table)
     taxa <- taxa[, colSums(taxa/rowSums(taxa) > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
@@ -40,8 +41,7 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
     names(group_test) <- levels(as.factor(dataset[, group]))
     if (length(subject.ID) != 0) {
         dataset$ID <- as.factor(dataset[, subject.ID])
-        for (i in names(taxa)[colSums(taxa > 0, na.rm = T) > ((zinf.cutoff * 
-            nrow(taxa)) - 1)]) {
+        for (i in names(taxa)[colSums(taxa > 0, na.rm = T) > ((zinf.cutoff *  nrow(taxa)) - 1)]) {
             tryCatch(group_test[i, -1] <- summary(glmmADMB::glmmadmb(as.formula(paste("round(", 
                 i, ")~", confounders[1], "+", confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ as.factor(", group, 
@@ -107,14 +107,13 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
         split = "_", fixed = T)[[1]])])
     sig <- as.character(sig)
     names(group_test)[-1] <- paste("p",names(group_test)[-1],sep="_")
-    for (k in names(group_test)[-1]) group_test[, paste(k, "FDR", sep = "_")] <- p.adjust(group_test[, 
-        k], "fdr")
+    for (k in names(group_test)[-1]) group_test[, paste(k, "FDR", sep = "_")] <- p.adjust(group_test[,k], "fdr")
     names(group_test)[1] <- "taxon"
     group_test$taxon <- rownames(group_test)
     
     for(i in levels(dataset$G)){
       for(j in rownames(group_test)){
-        group_test[j,paste("Mean",i,sep="_")] <-  mean(dataset[dataset$G==i,j]/dataset$ReadCount[dataset$G==i])
+        group_test[j,paste("Mean",i,sep="_")] <-  mean(dataset[dataset$G==i,j]/dataset$ReadCount[dataset$G==i],na.rm=T)
         }}
     for(i in levels(dataset$G)[levels(dataset$G)!= compare.to]) {
       group_test[,paste("FoldChange",i,sep="_")] <- group_test[,paste("Mean",i,sep="_")] / group_test[,paste("Mean",compare.to,sep="_")]
@@ -191,7 +190,7 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
             dev.off()
         }
         
-        quartz()
+         if (quartz) quartz() else x11()
         par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
             1), mgp = c(2, 0.3, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, cex.axis = 1.3, 
             cex.lab = 1.5)
@@ -214,7 +213,7 @@ GroupTest <- function(taxonomic.table, meta, group, compare.to = NULL, readcount
                   "turquoise4", "purple", "darkorange3", "lightyellow4", "black")[1:length(unique(dataset2[, 
                   group]))])
         }
-        quartz()
+        if (quartz) quartz() else x11()
         par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
             1), mgp = c(2, 0.3, 0), mar = c(7, 3.5, 1, 1), tck = -0.01, cex.axis = 1.3, 
             cex.lab = 1.5)

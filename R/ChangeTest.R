@@ -1,7 +1,7 @@
 ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL, 
     covariate = NULL, readcount.cutoff = 0, confounders = NULL, subject.ID,  time,
     outlier.cutoff = 3, p.cutoff = 0.05, select.by = NULL, select = NULL, pdf = F, 
-    consecutive = T, min.prevalence = 0, min.abundance = 0, label.direction = 1) {
+    consecutive = T, min.prevalence = 0, min.abundance = 0, label.direction = 1, quartz = T) {
     
     taxa <- read.delim(taxonomic.table)
   taxa <- taxa[, colSums(taxa/rowSums(taxa) > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
@@ -198,7 +198,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                 dev.off()
             }
             
-            quartz()
+            if (quartz) quartz() else x11()
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
                 1), mgp = c(3.5, 0.5, 0), mar = c(3, 5, 1, 1), tck = -0.01, 
                 cex.axis = 1.5, cex.lab = 1.5)
@@ -222,7 +222,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                     "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
                     "lightyellow4", "black")[1:length(unique(dataset2[, group]))],las=label.direction)
             }
-            quartz()
+            if (quartz) quartz() else x11()
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
                 1), mgp = c(2, 0.5, 0), mar = c(3, 3.5, 1, 1), tck = -0.01, 
                 cex.axis = 1.5, cex.lab = 1.5)
@@ -338,7 +338,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                   plot(p)
                   dev.off()
                 }
-                quartz()
+                if (quartz) quartz() else x11()
                 plot(p)
                 
                 
@@ -415,7 +415,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                   dev.off()
                 }
                 
-                quartz()
+                if (quartz) quartz() else x11()
                 plot(p)
             }
             return(covariate_test)
