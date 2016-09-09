@@ -18,7 +18,7 @@ Katri Korpela (2016). mare: Microbiota Analysis in R Easily. R package version 1
 
 First install the required packages:
 
-install.packages("devtools", "R2admb", "R2admb", "vegan", "sp", "gstat", "Hmisc", "beanplot", "stringr", "MASS", "seqinr", "ggplot2", "reshape2", "qgraph")
+install.packages("devtools", "R2admb", "R2admb", "vegan", "sp", "gstat", "Hmisc", "beanplot", "stringr", "MASS", "seqinr", "ggplot2", "reshape2", "qgraph", "gplot")
 
 If you want to use the graphical user interface, install also the package fgui:
 install.packages("fgui")
