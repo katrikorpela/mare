@@ -26,5 +26,5 @@ Imports:
 	ShortRead,
 	BiocGenerics,
 	glmmADMB,
-	gplot,
+	gplots,
 	qgraph
