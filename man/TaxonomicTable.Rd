@@ -6,7 +6,7 @@
 Create taxonomic tables
 }
 \description{
-The function assigns taxonomies (using USEARCH) for the OTUs or the unclustered reads, and creates taxonomic tables.
+The function assigns taxonomies (using USEARCH) for the OTUs or the unclustered reads, and creates taxonomic tables, as well as an annotated read table, in which all unique reads are assigned a taxonomy. Treating each unique read as a separate taxonomic unit offers the highest possible taxonomic resolution. 
 }
 \usage{
 TaxonomicTable(usearch.path, refDB, annotate.reads = T, 
@@ -18,7 +18,7 @@ folder.name = "", confidence.cutoff = 0.5)
 Directory of the USEARCH program.
 }
   \item{refDB}{
-Reference database in UDB format.
+Reference database.
 }
   \item{annotate.reads}{
 Should the reads be taxonomically annotated instead of the OTUs? TRUE is yes, FALSE if no.
@@ -35,7 +35,7 @@ Lowest acceptable taxonomic confidence value.
 \examples{
 	\dontrun{
 #Taxonomically annotate the reads (instead of the OTUs) that are in folder ExampleProcessedReads, 
-#using 0.6 confidence cut-off and the gut-specifc reference database created by FormatRefDB. 
+#using 0.6 confidence cut-off and the gut-specific reference database created by FormatRefDB. 
 #Then create taxonomic tables, which are written into a new folder called ExampleTaxonomicTables.
 
 TaxonomicTable(usearch.path = '/path/to/USEARCH8',
@@ -47,7 +47,6 @@ TaxonomicTable(usearch.path = '/path/to/USEARCH8',
 }
 }
 \references{
-
 See http://drive5.com/usearch/manual/ for details on taxonomic annotation.
 
 }

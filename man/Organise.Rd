@@ -4,7 +4,7 @@
 Organise the taxonomic tables to match the metadata file
 }
 \description{
-Rearranges the rows in the taxonomic table files to match those of the metadata file. This is necessary for all analyses which utilise both taxonomic data and metadata. Also calculates OTU richness and diversity and saves them into the metadata file, and adds the read count information into the metadata file. The metadata file should have one column with sample names matching exactly the sample names in the taxonomic tables.
+Rearranges the rows in the taxonomic table files to match those of the metadata file. This is necessary for all analyses which utilise both taxonomic data and metadata. Also calculates OTU richness and diversity (inverse Simpson, from package vegan), and richness of unique reads per genus, saves them into the metadata file, and adds the read count information into the metadata file. The metadata file should have one column with sample names matching exactly the sample names in the taxonomic tables. If you have several samples from the same individual or location, Organise will also calculate the Bray-Curtis dissimilarity and the Pearson correlation (similarity) in community composition between the samples.
 }
 \usage{
 Organise(meta, sample.names, otutable = list.files(pattern = "_otutable.txt$")[1], 
@@ -27,7 +27,7 @@ Names of the taxonomic tables. Should be text files.
 }
  \item{subject.ID}{
 If you have several samples from the same subject, specifying subject.ID and time will cause the 
-function to calculate within-subject similarity/dissimilarity (Pearson correlation and Bray-Curtis distance based on the otutable) between the different time points.
+function to calculate within-subject similarity/dissimilarity (Pearson correlation and Bray-Curtis distance based on the readtable) between the different time points.
 }
  \item{time}{
 If you have several samples from the same subject, specifying subject.ID and time will cause the 
@@ -36,6 +36,11 @@ function to calculate within-subject similarity/dissimilarity (Pearson correlati
 }
 \author{
 Katri Korpela
+}
+
+\references{
+Diversity index and dissimilarity between samples from the same individual is calculated using vegdist from package vegan.
+
 }
 
 \examples{

@@ -11,12 +11,12 @@ following columns: read name, GI of the best hit, similarity, and evalue.
 
 }
 \usage{
-Blast(nonchimeric, read.table, NCBItaxonomy, folder.name = "")
+Blast(finalreads, read.table, NCBItaxonomy, folder.name = "")
 }
 
 \arguments{
-  \item{nonchimeric}{
-Directory of the chimera-filtered reads, a file called nonchimeric.fasta produced by ProcessReads.
+  \item{finalreads}{
+Directory of the processed reads, a file called finalreads.fasta produced by ProcessReads.
 }
   \item{read.table}{
 Directory of the read table, produced by ProcessReads.
@@ -38,7 +38,7 @@ the NCBI taxonomy files  <ftp://ftp.ncbi.nih.gov/pub/taxonomy/>. You also need t
 \examples{
 	\dontrun{
 
-Blast(nonchimeric = "nonchimeric.fasta", read.table = "read_table.txt", NCBItaxonomy = "directory/to/NCBIdb/", folder.name = "")
+Blast(finalreads = "finalreads.fasta", read.table = "read_table.txt", NCBItaxonomy = "directory/to/NCBIdb/", folder.name = "")
 }
 }
 

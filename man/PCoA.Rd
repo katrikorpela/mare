@@ -7,9 +7,9 @@ Principal coordinates analysis
 The function conducts principal coordinates analysis using Bray-Curtis dissimilarities, interpolates values of a continuous variable into the principal coordinate space, and plots the PCoA with the interpolated continuous variable as the background color. Group differences are shown by different-coloured symbols and the proportion of overall variation explained by group is printed on the bottom of the figure with a p-value from adonis in package vegan.
 }
 \usage{
-PCoA(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, 
-    components = c(1, 2), background.variable = NULL, legendplace = "topright", 
-    select.by = NULL, select = NULL, relative = F, pdf = F, quartz = T)
+PCoA(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, group2 = NULL,
+    components = c(1, 2), background.variable = NULL, colour.scheme = terrain.colors, legendplace = "topright", 
+    select.by = NULL, select = NULL, relative = F, pdf = F, quartz = T, keep.result = F)
 }
 
 \arguments{
@@ -25,11 +25,17 @@ Lowest acceptable read count per sample. Samples with fewer reads are ignored.
   \item{group}{
 Name of the grouping variable.
 }
+  \item{group2}{
+Name of a second grouping variable.
+}
   \item{components}{
 Which principal components should be shown? Defaults to the first two components.
 }
   \item{background.variable}{
 Name of the continuous variable from the metadata file or a bacterial taxon to be shown as the background colour.
+}
+  \item{colour.scheme}{
+Backround colour scheme. Must be one of the following:  terrain.colors (default), heat.colors,topo.colors, or cm.colors. Do NOT put the colour.scheme in quotes!
 }
   \item{legendplace}{
 Place of the group legend in the figure. Options are "bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right" and "center".

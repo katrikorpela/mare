@@ -4,7 +4,7 @@
 Pre-processing of raw 16S amplicon sequences
 }
 \description{
-The function trims primer sequences, and using USEARCH merges paired-end reads, quality-filters the reads, and truncates the reads to a uniform lenght. The reads are dereplicated and chimera-filtered, rare reads are removed, and OTU clustering is performed.  Most of the steps are optional.
+The function trims primer sequences, and using USEARCH merges paired-end reads, quality-filters the reads, and truncates the reads to a uniform lenght. The reads are dereplicated and chimera-filtered, rare reads and reads that are likely due to barcode cross-talk are removed, and OTU clustering is performed.  Paired-end read merging and quality-filtering steps are optional.
 }
 \usage{
 ProcessReads(forward.reads = list.files(pattern = "_R1_"), 
@@ -12,7 +12,7 @@ ProcessReads(forward.reads = list.files(pattern = "_R1_"),
                          name.separator = "_", 
     usearch.path, forward.primer = NULL, reverse.primer = NULL, merge = F, 
     min.merged.length = NULL, min.overlap = NULL, max.mismatches = NULL, 
-    truncate = F, trucation.length = NULL, 
+    truncate = F,  
     filter = F, trunc.quality = 2, max.expected.error = 1, min.readlength = NULL, 
     readlength = NULL, min.read.prevalence = 0.0001, folder.name = "")
 }
@@ -50,9 +50,6 @@ Should the paired-end reads be merged? TRUE if yes, FALSE if no.
 }
   \item{truncate}{
 Should the forward reads be truncated to remove low-quality end regions? TRUE if yes, FALSE if no.
-}
-  \item{trucation.length}{
-(Truncation) Length of the truncated reads.
 }
   \item{filter}{
 Should the reads be quality filtered? TRUE if yes, FALSE if no.
