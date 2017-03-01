@@ -4,7 +4,7 @@ TaxonomicTable <- function(usearch.path, refDB, annotate.reads = T,
     wd <- getwd()
     
     if (annotate.reads) {
-        tobeannotated <- paste(wd, "/", folder.name, "ProcessedReads/nonchimeric.fasta", sep = "")
+        tobeannotated <- paste(wd, "/", folder.name, "ProcessedReads/finalreads.fasta", sep = "")
         readfile <- read.delim(paste(wd, "/", folder.name, "TaxonomicTables/", 
             folder.name, "_readtable.txt", sep = ""), check.names = F)
         OTU <- ""
@@ -45,7 +45,7 @@ TaxonomicTable <- function(usearch.path, refDB, annotate.reads = T,
         taxonomy$phylum <- "NA"
         for (j in 1:nrow(taxonomy)) taxonomy$phylum[j] <- strsplit(strsplit(as.character(taxonomy$taxonomy[j]), 
             split = "p:")[[1]][2], split = "[(]")[[1]][1]
-        taxonomy$species <- paste(taxonomy$genus, taxonomy$species, sep = ".")
+       # taxonomy$species <- paste(taxonomy$genus, taxonomy$species, sep = ".")
         
         taxonomy$species <- paste(taxonomy$phylum, taxonomy$class, taxonomy$order, 
             taxonomy$family, taxonomy$genus, taxonomy$species, sep = "_")
@@ -58,8 +58,7 @@ TaxonomicTable <- function(usearch.path, refDB, annotate.reads = T,
         taxonomy$class <- paste(taxonomy$phylum, taxonomy$class, sep = "_")
         
         annotated_readtable <- merge(taxonomy, readfile, by = "OTUId", all = T)
-        species_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = annotated_readtable$species), 
-            sum)
+        species_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = annotated_readtable$species), sum)
         genus_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = annotated_readtable$genus), 
             sum)
         family_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = annotated_readtable$family), 
@@ -88,6 +87,7 @@ TaxonomicTable <- function(usearch.path, refDB, annotate.reads = T,
         write.table(phylum_table, paste(wd, "/", folder.name, "TaxonomicTables/", 
             folder.name, OTU, "_phylum_table.txt", sep = ""), quote = F, row.names = F, 
             sep = "\t")
+        readtable <- annotated_readtable[,-c(2:8)]
         
     } else {
         taxonomy <- read.delim(paste(wd, "/", folder.name, "TaxonomicTables/", 
@@ -142,6 +142,17 @@ TaxonomicTable <- function(usearch.path, refDB, annotate.reads = T,
         write.table(phylum_table, paste(wd, "/", folder.name, "TaxonomicTables/", 
             folder.name, OTU, "_phylum_table.txt", sep = ""), quote = F, row.names = F, 
             sep = "\t")
+        readtable <- annotated_readtable[,-c(2:7)]
         
     }
+    
+    readtable$OTUId<-as.character(readtable$OTUId)
+    names(readtable)[1]<-"taxon"
+    for(i in na.omit(unique(annotated_readtable$genus))) readtable$taxon[annotated_readtable$genus==i&!is.na(annotated_readtable$genus)] <- paste(i,"read",1:nrow(annotated_readtable[annotated_readtable$genus==i&!is.na(annotated_readtable$genus),]),sep="_")
+    readtable <- readtable[order(readtable$taxon),] 
+    
+     write.table(readtable, paste(wd, "/", folder.name, "TaxonomicTables/", 
+            folder.name, OTU, "_annotated_read_table.txt", sep = ""), quote = F, row.names = F, 
+            sep = "\t")
+      
 } 

@@ -1,20 +1,13 @@
-CAZy <- function(species=NULL){
+CAZy <- function(genus_table=NULL){
 
-system(paste("grep bacteria ", species, " > species.txt"))
-system("awk '{OFS=RS;$1=$1}1' species.txt > species2.txt")
-system("rm species.txt")
-system("mv species2.txt species.txt")
-system("sed -n -e 's/^.*_//p' species.txt > species2.txt")
-system("rm species.txt")
-system("mv species2.txt species.txt")
-
-sp <- read.delim(species)
+sp <- read.delim(genus_table)
 sp <- data.frame(t(sp))
-sp$species <- sapply(rownames(sp),function(x) strsplit(x, split="[.]")[[1]][2])
+sp$species <- sapply(rownames(sp),function(x) strsplit(x, split="[_]")[[1]][5])
 sp <- aggregate(sp[,-length(names(sp))],by=list(species=sp$species),sum)
 rownames(sp)<- sp$species
 sp <- sp[,-1]
 sp <- sp[rownames(sp)!="",]
+sp <- sp[rownames(sp)!="uncultured",]
 
 dbpath <- system.file("extdata/CE.txt",package="mare")
 ce <- data.frame(read.delim(dbpath,header=F,sep="|")[,c(2,5)])
@@ -41,8 +34,6 @@ for(i in rownames(cesample)){
       cesample[i,k] <- sum(tmp[[paste(i,k)]]$summed)
      }
 }
-rownames(cesample)<-gsub(rownames(cesample),pattern = "[.]", replacement = "-")
-write.table(cesample,"CAZy_table_CarbohydrateEsterases.txt",quote=F,sep="\t",row.names=T)
 
 dbpath <- system.file("extdata/AA.txt",package="mare")
 aa <- data.frame(read.delim(dbpath,header=F,sep="|")[,c(2,5)])
@@ -69,8 +60,6 @@ for(i in rownames(aasample)){
       aasample[i,k] <- sum(tmp[[paste(i,k)]]$summed)
      }
 }
-rownames(aasample)<-gsub(rownames(aasample),pattern = "[.]", replacement = "-")
-write.table(aasample,"CAZy_table_AuxiliaryActivities.txt",quote=F,sep="\t",row.names=T)
 
 dbpath <- system.file("extdata/GH.txt",package="mare")
 gh <- data.frame(read.delim(dbpath,header=F,sep="|")[,c(2,5)])
@@ -97,8 +86,6 @@ for(i in rownames(ghsample)){
       ghsample[i,k] <- sum(tmp[[paste(i,k)]]$summed)
      }
 }
-rownames(ghsample)<-gsub(rownames(ghsample),pattern = "[.]", replacement = "-")
-write.table(ghsample,"CAZy_table_GlycosideHydrolases.txt",quote=F,sep="\t",row.names=T)
 
 dbpath <- system.file("extdata/GT.txt",package="mare")
 gt <- data.frame(read.delim(dbpath,header=F,sep="|")[,c(2,5)])
@@ -125,8 +112,6 @@ for(i in rownames(gtsample)){
       gtsample[i,k] <- sum(tmp[[paste(i,k)]]$summed)
      }
 }
-rownames(gtsample)<-gsub(rownames(gtsample),pattern = "[.]", replacement = "-")
-write.table(gtsample,"CAZy_table_GlycosylTransferases.txt",quote=F,sep="\t",row.names=T)
 
 #polysaccharide lyases
 dbpath <- system.file("extdata/PL.txt",package="mare")
@@ -154,7 +139,16 @@ for(i in rownames(plsample)){
       plsample[i,k] <- sum(tmp[[paste(i,k)]]$summed)
      }
 }
-rownames(plsample)<-gsub(rownames(plsample),pattern = "[.]", replacement = "-")
-write.table(plsample,"CAZy_table_PolysaccharideLyases.txt",quote=F,sep="\t",row.names=T)
 
+rownames(cesample)<-gsub(rownames(cesample),pattern = "[.]", replacement = "-")
+rownames(aasample)<-gsub(rownames(aasample),pattern = "[.]", replacement = "-")
+rownames(gtsample)<-gsub(rownames(gtsample),pattern = "[.]", replacement = "-")
+rownames(plsample)<-gsub(rownames(plsample),pattern = "[.]", replacement = "-")
+rownames(ghsample)<-gsub(rownames(ghsample),pattern = "[.]", replacement = "-")
+
+CAZy_table <- cbind(aasample,cesample,gtsample,plsample,ghsample)
+CAZY_contr <- cbind(aatable,cetable,gttable,pltable,ghtable)
+
+write.table(CAZy_table,"CAZy_table.txt",quote=F,sep="\t",row.names=T)
+write.table(CAZY_contr,"CAZy_genuscontributions.txt",quote=F,sep="\t",row.names=T)
 } 

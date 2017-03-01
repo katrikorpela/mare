@@ -1,10 +1,10 @@
-Blast <- function(nonchimeric, read.table, NCBItaxonomy, folder.name){
+Blast <- function(finalreads, read.table, NCBItaxonomy, folder.name){
 
 wd <- getwd()
     
-system(paste("blastn -db rRNA_typestrains/prokaryotic_16S_ribosomal_RNA -query ",nonchimeric, 
+system(paste("blastn -db rRNA_typestrains/prokaryotic_16S_ribosomal_RNA -query ",finalreads, 
 " -out ", wd, "/", folder.name, 
-"TaxonomicTables/blasttaxonomy.txt -culling_limit 1 -outfmt ", shQuote("6 qseqid staxids pident evalue"), " -remote", 
+"TaxonomicTables/blasttaxonomy.txt -culling_limit 1 -outfmt ", shQuote("6 qseqid staxid pident evalue"), " -remote", 
 sep=""))
 
 taxonomy <- read.delim(paste(wd, "/", folder.name, "TaxonomicTables/blasttaxonomy.txt", sep = ""), header = F)[, c(1:2)]
