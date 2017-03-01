@@ -3,7 +3,7 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
                          name.separator = "_", 
     usearch.path, forward.primer = NULL, reverse.primer = NULL, merge = F, 
     min.merged.length = NULL, min.overlap = NULL, max.mismatches = NULL, 
-    truncate = F, trucation.length = NULL, 
+    truncate = F,
     filter = F, trunc.quality = 2, max.expected.error = 1, min.readlength = NULL, 
     readlength = NULL, min.read.prevalence = 0.0001, folder.name = "") {
     
@@ -81,7 +81,7 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
     } else if (truncate) {
         for (i in seq_along(trimmed_fwd)) {
             system(paste(usearch.path, " -fastx_truncate ", trimmed_fwd[i], 
-                " -trunclen ", trucation.length, " -fastqout ", strsplit(trimmed_fwd[i], 
+                " -trunclen ", readlength, " -fastqout ", strsplit(trimmed_fwd[i], 
                   name.separator, fixed = F)[[1]][1], name.separator ,"truncated.fastq", sep = ""))
            system(paste("rm ", trimmed_fwd[i], sep = ""))
         }
