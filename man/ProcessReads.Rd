@@ -4,7 +4,7 @@
 Pre-processing of raw 16S amplicon sequences
 }
 \description{
-The function trims primer sequences, and using USEARCH merges paired-end reads, quality-filters the reads, and truncates the reads to a uniform lenght. The reads are dereplicated and chimera-filtered, rare reads and reads that are likely due to barcode cross-talk are removed, and OTU clustering is performed.  Paired-end read merging and quality-filtering steps are optional.
+The function trims primer sequences, and using USEARCH (optionally) merges or pools as single reads without merging paired-end reads, quality-filters the reads, and truncates the reads to a set lenght. The reads are dereplicated and chimera-filtered, rare reads and reads that are likely due to barcode cross-talk are removed, and OTU clustering is performed.
 }
 \usage{
 ProcessReads(forward.reads = list.files(pattern = "_R1_"), 
@@ -12,8 +12,8 @@ ProcessReads(forward.reads = list.files(pattern = "_R1_"),
                          name.separator = "_", 
     usearch.path, forward.primer = NULL, reverse.primer = NULL, merge = F, 
     min.merged.length = NULL, min.overlap = NULL, max.mismatches = NULL, 
-    truncate = F,  
-    filter = F, trunc.quality = 2, max.expected.error = 1, min.readlength = NULL, 
+    pool = T, truncate = T, 
+    filter = T, trunc.quality = 2, max.expected.error = 1, 
     readlength = NULL, min.read.prevalence = 0.0001, folder.name = "")
 }
 
@@ -72,6 +72,12 @@ Minimum acceptable prevalence of a sequence in the whole data set. Sequenes that
   \item{folder.name}{
 Name for the new folder where the processed reads are written. 
 }
+}
+
+\details{
+ProcessReads has been tested with Illumina HiSeq and MiSeq reads, as well as 454 and IonTorrent reads. It requires as input .fastq files, one file per sample. The quality scores are assumed to be Illumina quality scores, but the quality filtering step can be skipped in most cases, as filtering-by-readcount takes care of erroneous reads.
+
+Sample names: The function splits the file names at "name.separator" and uses the beginning of the file name as the same name. Each resulting sample name should be unique (so select "name.separator" carefully) and should not contain "_" or "/"!
 }
 
 \references{

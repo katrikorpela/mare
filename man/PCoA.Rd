@@ -9,7 +9,7 @@ The function conducts principal coordinates analysis using Bray-Curtis dissimila
 \usage{
 PCoA(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, group2 = NULL,
     components = c(1, 2), background.variable = NULL, colour.scheme = terrain.colors, legendplace = "topright", 
-    select.by = NULL, select = NULL, relative = F, pdf = F, quartz = T, keep.result = F)
+    select.by = NULL, select = NULL, relative = F, pdf = F, keep.result = F)
 }
 
 \arguments{
@@ -51,9 +51,6 @@ Should relative abundances rather than absolute counts be used? If yes, specify 
 }
 \item{pdf}{
 Should the figure be saved as pdf? If yes, specify TRUE.
-}
-  \item{quartz}{
-Plot the figure into a quartz device (default). If your OS does not support quartz, set to FALSE.
 }
 }
 

@@ -8,7 +8,7 @@ Test how bacterial taxa and host variables together influence the response varia
 Combine information on bacterial taxa and a set of host variables into one model for the response variable. PathModel finds the bacterial taxa and host variables that together are significantly associated with the response variable, and the host variables that are associated with the response-variable-associated bacterial taxa.
 }
 \usage{
-PathModel(taxonomic.table, meta, response, binomial.response = F, variables, readcount.cutoff = 0, 
+PathModel(taxonomic.table, meta, response = NULL, binomial.response = F, variables, readcount.cutoff = 0, 
     subject.ID = NULL,  outlier.cutoff, 
     select.by = NULL, select = NULL, pdf = F, 
     min.prevalence = 0, min.abundance = 0, quartz = T, keep.result = F)
@@ -22,7 +22,7 @@ Taxonomic table containing the bacterial taxa to be tested. Should be the organi
 Metadata file.
 }
   \item{response}{
-The response variable. This has to be either a numerical variable or a binary variable containing 0s and 1s.
+The response variable. This has to be either a numerical variable or a binary variable containing 0s and 1s. If the response variable is omitted, the model will use all bacterial taxa as the response variables, and finds the best total model for each taxon.
 }
   \item{binomial.response}{
 Set to TRUE if the response variable is not numerical but contains only 0s and 1s.
@@ -61,11 +61,12 @@ Should be the result figure be printed as PDF? If yes, set to TRUE.
 Plot the results in quartz device.
 }
   \item{keep.result}{
-Return the results to the R session.
+Store the results as a list. The first item on the list is the response model, and the second item is a list of all the bacterial models. The resulting final best models can then be accessed and inspected by using the summary command. 
 }
 }
 \details{
 PathModel first fits a linear model (make sure your variable is normally distributed) or a binomial model (for 0/1 response variables) separately to all bacterial taxa and host variables, then selects the best of those into a combined model and performs model reduction using AIC to simplify the model. It then performs the same model selection for each of the bacterial taxa retained in response variable model, now fitting negative binomial models. Then the best overall model is plotted, including the bacterial taxa and host variables associated with the response variable, and the host variables associated with these bacterial taxa.
+
 }
 
 \author{

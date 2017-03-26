@@ -9,8 +9,7 @@ Create taxonomic tables
 The function assigns taxonomies (using USEARCH) for the OTUs or the unclustered reads, and creates taxonomic tables, as well as an annotated read table, in which all unique reads are assigned a taxonomy. Treating each unique read as a separate taxonomic unit offers the highest possible taxonomic resolution. 
 }
 \usage{
-TaxonomicTable(usearch.path, refDB, annotate.reads = T, 
-folder.name = "", confidence.cutoff = 0.5)
+TaxonomicTable(usearch.path, refDB, folder.name = "", confidence.cutoff = 0.5)
 }
 
 \arguments{
