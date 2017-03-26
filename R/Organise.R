@@ -4,25 +4,26 @@ Organise <- function(meta, sample.names, otutable = list.files(pattern = "_otuta
   
     metadata <- read.delim(meta)
     rownames(metadata) <- metadata[, sample.names]
-    for (i in seq_along(taxonomic.tables)) {
+    readtable <- data.frame(t(read.table(list.files(pattern = "annotated_read_table.txt$")[1], header = T, row.names = 1, check.names = F)))
+    readtable <- readtable[rownames(metadata), ]
+    genera <- sapply(colnames(readtable), function(x) strsplit(x, split="_")[[1]][5])
+    generalist <- list()
+     for(i in na.omit(unique(genera))) {
+       generalist[[i]] <- cbind(readtable[,names(genera[genera==i&!is.na(genera)])],rep(0,nrow(readtable)))
+       metadata[,paste(i,"richness",sep="_")] <- vegan::specnumber(generalist[[i]])
+       }
+   
+   for (i in seq_along(taxonomic.tables)) {
         write.table(data.frame(t(read.table(taxonomic.tables[i], header = T, 
             row.names = "taxon", check.names = F)))[rownames(metadata), ], 
             paste("organised", taxonomic.tables[i], sep = "_"), quote = F, 
             row.names = T, sep = "\t")
-    }
+   }
+   
     otu <- data.frame(t(read.table(otutable, header = T, row.names = "OTUId", check.names = F)))
     otu <- otu[rownames(metadata), ]
     metadata$Richness <- vegan::specnumber(otu)
     metadata$Diversity <- vegan::diversity(otu, "inv")
-    
-    readtable <- data.frame(t(read.table(list.files(pattern = "annotated_read_table.txt$")[1], header = T, row.names = 1, check.names = F)))
-    readtable <- readtable[rownames(metadata), ]
-    genera <- sapply(colnames(readtable), function(x) strsplit(x, split="_")[[1]][5])
-   generalist <- list()
-     for(i in na.omit(unique(genera))) {
-       generalist[[i]] <- readtable[,names(genera[genera==i&!is.na(genera)])]
-      metadata[,paste(i,"richness",sep="_")] <- vegan::specnumber(generalist[[i]])
-       }
     
     reads <- read.table(list.files(pattern="readnumbers.txt"), header = T, row.names = "sample", 
         check.names = F)

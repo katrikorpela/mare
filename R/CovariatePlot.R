@@ -1,6 +1,13 @@
 CovariatePlot <- function(meta, taxonomic.table, covariate, taxa, smooth.method = "loess", 
-    readcount.cutoff = 0, select.by = NULL, select = NULL, pdf = F, quartz = T) {
-    
+    readcount.cutoff = 0, select.by = NULL, select = NULL, pdf = F) {
+
+   if(Sys.info()[['sysname']] == "Linux") {
+  quartz <- function() {X11()}
+  }
+    if(Sys.info()[['sysname']] == "Windows") {
+  quartz <- function() {X11()}
+}
+   
     meta <- read.delim(meta)
     taxatable <- read.delim(taxonomic.table)
     names(taxatable) <- sapply(names(taxatable), function(x) gsub("_NA", ".", 
@@ -29,8 +36,7 @@ CovariatePlot <- function(meta, taxonomic.table, covariate, taxa, smooth.method 
           ggplot2::ylab("Relative abundance (%)") + 
           ggplot2::theme(legend.position = "none",strip.background =  ggplot2::element_rect(color = "white",fill="white"))
           
-    if (quartz) quartz()
-    
+ quartz()
     plot(p)
     
     if (pdf) {

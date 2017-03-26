@@ -1,16 +1,33 @@
-ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL, 
+ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, order.table=NULL, class.table=NULL, phylum.table=NULL, 
+                      meta, group = NULL, compare.to = NULL, 
     covariate = NULL, readcount.cutoff = 0, confounders = NULL, subject.ID,  time,
     outlier.cutoff = 3, p.cutoff = 0.05, select.by = NULL, select = NULL, pdf = F, 
-    consecutive = T, min.prevalence = 0, min.abundance = 0, label.direction = 1, quartz = T, keep.result =F) {
+    consecutive = T, min.prevalence = 0, min.abundance = 0, label.direction = 1, keep.result =F) {
     
-  taxa <- read.delim(taxonomic.table)
-  colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))])
-    
-  taxa <- taxa[, colSums(taxa/rowSums(taxa) > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
-    
+      
+    if(Sys.info()[['sysname']] == "Linux") {
+  quartz <- function() {X11()}
+  }
+    if(Sys.info()[['sysname']] == "Windows") {
+  quartz <- function() {X11()}
+}
+  
   metadata <- read.delim(meta)
- 
-
+  if(length(species.table)>0) species <- read.delim(species.table) else species <- NA
+  if(length(genus.table)>0) genus <- read.delim(genus.table) else genus <- NA
+  if(length(family.table)>0) family <- read.delim(family.table) else family <- NA
+  if(length(order.table)>0) order <- read.delim(order.table) else order <- NA
+  if(length(class.table)>0) class <- read.delim(class.table) else class <- NA
+  if(length(phylum.table)>0) phylum <- read.delim(phylum.table) else phylum <- NA
+  
+  taxa <- data.frame(cbind(species,genus,family,order,class,phylum))
+  taxa <- taxa[,names(colSums(taxa)[!is.na(colSums(taxa))])]
+  
+    colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))])
+    colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))] <-  gsub(pattern="_Incertae_Sedis_",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))])
+  
+ taxa <- taxa[, colSums(taxa/ metadata$ReadCount > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
+       
     if (length(select.by) != 0) {
         metadata$selection <- metadata[, select.by]
         taxa <- taxa[metadata$selection == select, ]
@@ -79,35 +96,37 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
     
     if (length(group) != 0 & length(covariate) == 0) {
       
+    dataset[,group]<-as.character(dataset[,group])
+    for(i in unique(dataset[,group])) if(table(dataset[,group])[i] < 3) dataset[,group][dataset[,group]==i] <- "toofewcases"
+    dataset <- dataset[dataset[,group]!="toofewcases",]
+    dataset[, group] <- dataset[, group][drop = T]
     if(length(compare.to)==0) compare.to = levels(as.factor(dataset[,group]))[1]
-    dataset$G <- as.factor(dataset[,group])
-    dataset[, group] <- as.character(dataset[, group])
-    dataset[, group][dataset[, group] == "0" & !is.na(dataset[, group])] <- "group0"
+   dataset$G <- as.factor(dataset[,group])
+    if (compare.to != "0") dataset[, group][dataset[, group] == "0" & !is.na(dataset[, group])] <- "group0"
     dataset[, group][dataset[, group] == compare.to & !is.na(dataset[, group])] <- "0"
     dataset[, group] <- as.factor(dataset[, group])
-    
-        grouptime <- paste(dataset[dataset$time != 1 & dataset[, "G"] != 
-            compare.to,"time"], dataset[dataset$time != 1 & dataset[, "G"] != 
-            compare.to, "G"], sep = "/")
+   
+    grouptime <- paste(dataset[dataset$time != 1 & dataset[, "G"] != compare.to & dataset[,group]!="other","time"], 
+                       dataset[dataset$time != 1 & dataset[, "G"] != compare.to & dataset[,group]!="other", "G"], sep = "/")
         
-        modeldata <- na.omit(dataset[, c("time","G", subject.ID,time,group, confounders[1], confounders[2], confounders[3], 
+  modeldata <- na.omit(dataset[dataset[,group]!="other", c("time","G", subject.ID,time,group, confounders[1], confounders[2], confounders[3], 
                   confounders[4], confounders[5], names(taxa), paste("baseline", names(taxa), sep = ""))[c("time", "G",subject.ID,group, time,
                   confounders[1], confounders[2], confounders[3], confounders[4], 
                   confounders[5], names(taxa), paste("baseline", names(taxa), sep = "")) != ""]])
+  modeldata[, group] <- modeldata[, group][drop=T]
         
-        for(i in unique(modeldata[,subject.ID])){ 
- modeldata[modeldata[,subject.ID]==i,names(taxa)[apply(taxa[metadata[,subject.ID]==i,names(taxa)], MARGIN=2,FUN=max)==0]]<-NA
-  }
-        group_test <- data.frame(array(dim = c(length(names(taxa)), 1 + (length(levels(as.factor(grouptime)))))))
+#for(i in unique(modeldata[,subject.ID])){ 
+# modeldata[modeldata[,subject.ID]==i,names(taxa)[apply(taxa[metadata[,subject.ID]==i,names(taxa)], MARGIN=2,FUN=max)==0]]<-NA
+#  }
+        group_test <- data.frame(array(dim = c(length(names(taxa)), 1 + 2*(length(levels(as.factor(grouptime)))))))
         rownames(group_test) <- names(taxa)
-        names(group_test) <- c("taxon", levels(as.factor(grouptime)))
+        names(group_test) <- c("taxon", paste("estimate_",levels(as.factor(grouptime)),sep=""),paste("p_",levels(as.factor(grouptime)),sep=""))
         
         for (i in names(taxa)) {
             for (k in unique(modeldata$time)) {
-               tryCatch(model[[paste(i,k)]] <- lm(as.formula(paste(i, 
-                  "~baseline", i, "+", confounders[1], "+", confounders[2], 
-                  "+", confounders[3], "+", confounders[4], "+", confounders[5], 
-                  "+ as.factor(", group, ")", sep = "")), data = modeldata[modeldata$time == k&!is.na(modeldata[,i]),]), 
+               tryCatch(model[[paste(i,k)]] <- lm(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
+                  "+", confounders[3], "+", confounders[4], "+", confounders[5], "+ ", group, sep = "")), 
+                  data = modeldata[modeldata$time == k&!is.na(modeldata[,i]),]), 
                   error = function(e) NULL)
                if(length(model[[paste(i,k)]])>0){
                   if(nrow(summary(model[[paste(i,k)]])$coef)>1){
@@ -119,30 +138,23 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
           if(anova(lm(res ~ group, data=tmp))$Pr[1]>0.05){
           if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
           if(anova(lm(resdev ~ group, data=tmp))$Pr[1]>0.05){
-               group_test[i, paste(k, levels(as.factor(dataset[, "G"]))[levels(as.factor(dataset[, "G"]))!=compare.to],sep = "/")] <- summary(model[[paste(i,k)]])$coef[-c(1:(2 + 
-                  length(confounders[confounders != ""]))), 4]
-                } else print(paste("Model for",i,"showed violation against homoscedasticity!"))
-          } else print(paste("Model for",i,"showed violation against homoscedasticity!"))
-            } else print(paste("Model for",i,"showed violation against independence! You may be missing an important covariate."))
-              } else print(paste("Model for",i,"showed violation against independence! You may be missing an important covariate."))
-            } else print(paste("Model for",i,"failed!"))
-               } else print(paste("Model for",i,"failed!"))
-               } else print(paste("Model for",i,"failed!"))
+          for(j in levels(modeldata[,group])[-1]){
+            group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <-  summary(model[[paste(i,k)]])$coef[paste(group,j,sep=""),c(1,4)]
+            }   
+          }}}}}}}
             }
         }
         
      group_test$taxon <- rownames(group_test)
       group_test <- na.omit(group_test)  
-      sig <- as.character(rownames(group_test)[apply(group_test[,-1],MARGIN=1,FUN=min,na.rm=T) < p.cutoff])
-     
-        names(group_test)[-1] <- paste("p",names(group_test)[-1],sep="_")
-        for (k in names(group_test)[-1]) group_test[, paste(k, "FDR", sep = "_")] <- p.adjust(group_test[,  k], "fdr")
-
+      sig <- as.character(rownames(group_test)[sapply(data.frame(t(group_test[, grepl(pattern="p_",x=names(group_test))])), min,na.rm=T) < p.cutoff])
+     for (k in names(group_test)[grepl(pattern="p_",x=names(group_test))]) group_test[, paste(k, "FDR", sep = "_")] <- p.adjust(group_test[,k], "fdr")
+   
       resids <- modeldata
   
     for(i in rownames(group_test)){
       for(k in unique(modeldata$time)){
-      resids[resids$time==k&!is.na(resids[,i]),i] <-  tryCatch(resid(update(model[[paste(i,k)]], as.formula(paste(".~. -as.factor(",group,")",sep="")))),
+      resids[resids$time==k&!is.na(resids[,i]),i] <-  tryCatch(resid(update(model[[paste(i,k)]], as.formula(paste(".~. -",group,sep="")))),
                                error = function(e) NULL)
     }}
  
@@ -154,8 +166,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
     }
     }
 
- write.table(group_test, paste(strsplit(taxonomic.table, split = "_")[[1]][3], 
-            "_", "ChangeTest_", group, compare.to, "_", select.by, select, ".txt", 
+ write.table(group_test, paste("ChangeTest_", group, compare.to, "_", select.by, select, ".txt", 
             sep = ""), quote = F, row.names = F, sep = "\t")
    
     dataset2 <- data.frame(resids)
@@ -166,18 +177,13 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
        
         
             if (pdf) {
-                pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3], "_change_", 
-                  group, compare.to, "_", select.by, select, "_Boxplot.pdf", 
-                  sep = ""))
+                pdf(paste("ChangeTest_", group, compare.to, "_", select.by, select, "_Boxplot.pdf",  sep = ""))
                 par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
                   1), mgp = c(3.5, 0.5, 0), mar = c(3, 5, 1, 1), tck = -0.01, 
                   cex.axis = 1.1, cex.lab = 1.5)
                 for (i in sig) {
-                  # dataset3 <- na.omit(dataset2[,c(i,"grouptime",group,time)]) 
-                  lab <- paste(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"][length(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"])],"deviance")
-                 #bxp(z=list(stats=matrix(unlist(tapply(dataset3[,i],dataset3[,"grouptime"],summary)),nrow=6,ncol=length(unique(dataset3[,"grouptime"])))[-3,],
-                #           n=table(dataset3[,"grouptime"]),names=levels(dataset3[,"grouptime"])),
-                    boxplot(dataset2[, i] ~ dataset2[, "grouptime"], 
+                lab <- paste(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"][length(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"])],"deviance")
+               boxplot(dataset2[, i] ~ dataset2[, "grouptime"], 
                     ylab = lab, xlab = group, boxfill = c("skyblue", 
                     "yellowgreen", "pink", "turquoise2", "plum", "darkorange", 
                     "lightyellow", "gray")[1:length(unique(dataset2[, group]))], 
@@ -197,9 +203,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                       "lightyellow4", "black")[1:length(unique(dataset2[, group]))], las=label.direction)
                 }
                 dev.off()
-                pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3], "_change_", 
-                  group, compare.to, "_", select.by, select, "_Beanplot.pdf", 
-                  sep = ""))
+                pdf(paste("Change_", group, compare.to, "_", select.by, select, "_Beanplot.pdf",  sep = ""))
                 par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
                   1), mgp = c(2, 0.5, 0), mar = c(3, 3.5, 1, 1), tck = -0.01, 
                   cex.axis = 1.1, cex.lab = 1.5)
@@ -221,20 +225,16 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                 dev.off()
             }
             
-            if (quartz) quartz() else x11()
+            quartz()
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
                 1), mgp = c(3.5, 0.5, 0), mar = c(3, 5, 1, 1), tck = -0.01, 
                 cex.axis = 1.1, cex.lab = 1.5)
             
            
             for (i in sig) { 
-              #dataset3 <- na.omit(dataset2[,c(i,"grouptime",group,time)]) 
               lab <- paste(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"][length(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"])],"deviance")
-               # boxplot(dataset2[, i] ~ paste(dataset2[dataset2[, time] !=  1, time], dataset2[, group], sep="/"), 
               boxplot(dataset2[, i] ~ dataset2[, "grouptime"],   
-              #bxp(z=list(stats=matrix(unlist(tapply(dataset2[,i],dataset2[,"grouptime"],summary)),nrow=6,ncol=length(unique(dataset2[,"grouptime"])))[-3,],
-               #            n=table(dataset2[,"grouptime"]),names=levels(dataset2[,"grouptime"])),
-                    ylab = lab, xlab = group, 
+           ylab = lab, xlab = group, 
                   boxfill = c("skyblue",  "yellowgreen", "pink", "turquoise2", "plum","darkorange", 
                   "lightyellow", "gray")[1:length(unique(dataset2[, group]))], 
                   outpch = 21, outbg = c("skyblue", "yellowgreen", "pink", 
@@ -252,7 +252,7 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                     "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
                     "lightyellow4", "black")[1:length(unique(dataset2[, group]))],las=label.direction)
             }
-            if (quartz) quartz() else x11()
+            quartz()
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
                 1), mgp = c(2, 0.5, 0), mar = c(3, 3.5, 1, 1), tck = -0.01, 
                 cex.axis = 1.1, cex.lab = 1.5)
@@ -271,96 +271,171 @@ ChangeTest <- function(taxonomic.table, meta, group = NULL, compare.to = NULL,
                     "turquoise4", "purple", "darkorange3", "lightyellow4", 
                     "black")[1:length(unique(dataset2[, group]))]), error = function(e) NULL)
             }
+            
+            
+   
+library(metacoder)
+    
+if(length(species.table)!=0){
+  sp <- colnames(species)
+} else{
+ if(length(genus.table)!=0){
+   sp <- colnames(genus)
+ } else{
+  if(length(family.table)!=0){
+    sp <- colnames(family)
+  } else{
+    if(length(order.table)!=0){
+      sp <- colnames(order)
+    } else{
+      if(length(class.table)!=0){
+        sp <- colnames(class)
+      } else sp <- colnames(phylum)
+    }
+  }
+}
+}
+
+for(h in unique(dataset[,"G"])[unique(dataset[,"G"])!=compare.to & !is.na(unique(dataset[,"G"]))]){
+  for(t in unique(dataset[,"time"])[unique(dataset[,"time"])>1 & !is.na(unique(dataset[,"time"]))]){
+group_test_summary <- group_test[,c("taxon",paste("estimate_",t,"/",h,sep=""),paste("p_",t,"/",h,sep=""))]
+group_test_summary$name <- sapply(group_test_summary$taxon, function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
+rownames(group_test_summary)<-  group_test_summary$taxon
+group_test_summary[,paste("estimate_",t,"/",h,sep="")][group_test_summary[,paste("p_",t,"/",h,sep="")] > p.cutoff] <- 0
+group_test_summary2 <- group_test_summary[intersect(sp,rownames(group_test_summary)),]
+  
+seqs1 <- list()
+for(i in rownames(group_test_summary2)){
+  if(!is.na(group_test_summary2[i,paste("p_",t,"/",h,sep="")]))  if(group_test_summary2[i,paste("p_",t,"/",h,sep="")]<p.cutoff)  seqs1[[group_test_summary2[i,"taxon"]]]<- group_test_summary2[i,paste("estimate_",t,"/",h,sep="")]
+}
+
+for(i in rownames(group_test_summary2)){
+  if(!is.na(group_test_summary2[i,paste("p_",t,"/",h,sep="")]))  if(group_test_summary2[i,paste("p_",t,"/",h,sep="")]>p.cutoff) seqs1[[group_test_summary2[i,"taxon"]]]<- 0
+}
+
+abu <- list()
+for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
+
+newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+
+tmp2 <- extract_taxonomy(input=newseqs2,regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
+                         key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_")
+
+for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)&tmp2$taxon_data$name!="NA"]){
+if(tmp2$taxon_data$name[as.numeric(k)]%in%group_test_summary$name) tmp2$taxon_data$taxon_info_1[as.numeric(k)] <- group_test_summary[group_test_summary$name==tmp2$taxon_data$name[as.numeric(k)],paste("estimate_",t,"/",h,sep="")][1]
+}
+for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)])){
+ tmp2$taxon_data$taxon_info_1[as.numeric(k)] <-  mean(as.numeric(tmp2$taxon_data$taxon_info_1[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
+}
+
+
+treltaxa <- as.data.frame(t(reltaxa))
+treltaxa$name <-  sapply(rownames(treltaxa), function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
+
+for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)]){
+if(tmp2$taxon_data$name[as.numeric(k)]%in%treltaxa$name) tmp2$taxon_data$taxon_info_2[as.numeric(k)] <- rowMeans(treltaxa[treltaxa$name==tmp2$taxon_data$name[as.numeric(k)],-ncol(treltaxa)][1,])
+}
+
+
+for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)])){
+ tmp2$taxon_data$taxon_info_2[as.numeric(k)] <-  sum(as.numeric(tmp2$taxon_data$taxon_info_2[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
+}
+
+heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100, 
+                   node_label = ifelse(name == "NA", NA, name),
+                   node_color = as.numeric(taxon_info_1),
+                   node_color_range=c("royalblue","cornflowerblue","gray90","hotpink","red"),
+                   node_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   edge_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   node_color_axis_label = paste(group,h,"compared to",compare.to),
+                   node_size_axis_label = "Average relative abundance (%)",
+          node_label_size_range=c(0.01,0.013),
+          node_label_size_trans="ln",
+          #node_label_size=0.03,
+          initial_layout = "reingold-tilford",
+          layout = "davidson-harel",
+          overlap_avoidance = 0.5, node_label_max=150, make_legend=T, 
+          node_size_trans="linear",
+          node_size_range=c(0.012,0.05),
+          node_color_trans="linear",
+          title=paste("Differences between groups", h, "and", compare.to), title_size=0.03,
+          output_file=paste(group,h,"vs", compare.to, "_", select.by, select,"_HeatTree.pdf",sep=""))
+}
+}
+   
+#------------
+            
+            
+            
+            
         }
        if(keep.result)   return(group_test)
+    
+#------------
+ 
     }
    
     if (length(covariate) != 0) {
         if (length(group) != 0) {
-        dataset[, group] <- dataset[, group][drop = T]
-        dataset$group <- as.factor(dataset[, group])
+
+    dataset[,group]<-as.character(dataset[,group])
+    for(i in unique(dataset[,group])) if(table(dataset[,group])[i] < 3) dataset[,group][dataset[,group]==i] <- "toofewcases"
+    dataset <- dataset[dataset[,group]!="toofewcases",]
+    dataset[, group] <- dataset[, group][drop = T]
+    if(length(compare.to)==0) compare.to = levels(as.factor(dataset[,group]))[1]
+   dataset$G <- as.factor(dataset[,group])
+    if (compare.to != "0") dataset[, group][dataset[, group] == "0" & !is.na(dataset[, group])] <- "group0"
+    dataset[, group][dataset[, group] == compare.to & !is.na(dataset[, group])] <- "0"
+    dataset[, group] <- as.factor(dataset[, group])
+
         
-   covariate_test <- data.frame(array(dim = c(length(names(taxa)), (1 + 2*length(levels(dataset$group))))))
-   names(covariate_test) <- c("taxon", c(paste(covariate, levels(dataset$group),"estimate", sep = "_"),
-                                              paste(covariate, levels(dataset$group),"p", sep = "_")))
+   covariate_test <- data.frame(array(dim = c(length(names(taxa)), (1 + 2*length(levels(dataset[,group]))))))
+   names(covariate_test) <- c("taxon", c(paste(covariate, levels(dataset[,group]),"estimate", sep = "_"),
+                                              paste(covariate, levels(dataset[,group]),"p", sep = "_")))
   covariate_test$taxon <- names(taxa)
   rownames(covariate_test) <- names(taxa)
         
-  modeldata <- na.omit(dataset[, c("group",subject.ID, covariate, confounders[1], confounders[2], confounders[3], 
+  modeldata <- na.omit(dataset[, c(group,subject.ID, covariate, confounders[1], confounders[2], confounders[3], 
                     confounders[4], confounders[5], names(taxa), paste("baseline", names(taxa), 
-                      sep = ""))[c("group", subject.ID, covariate, confounders[1], confounders[2], 
+                      sep = ""))[c(group, subject.ID, covariate, confounders[1], confounders[2], 
                     confounders[3], confounders[4], confounders[5], names(taxa), paste("baseline", 
                       names(taxa), sep = "")) != ""]])
     
- for(i in unique(modeldata[,subject.ID])){ 
- modeldata[modeldata[,subject.ID]==i,names(taxa)[apply(taxa[metadata[,subject.ID]==i,names(taxa)], MARGIN=2,FUN=max)==0]]<-NA
-  }  
+ #for(i in unique(modeldata[,subject.ID])){ 
+ #modeldata[modeldata[,subject.ID]==i,names(taxa)[apply(taxa[metadata[,subject.ID]==i,names(taxa)], MARGIN=2,FUN=max)==0]]<-NA
+ # }  
 
     for (i in names(taxa)) {
-    for (j in levels(dataset$group)) {
+    for (j in unique(modeldata[,group])) {
     tryCatch(model[[paste(i,j)]] <- lm(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
                     "+", confounders[3], "+", confounders[4], "+", confounders[5], 
-                    "+", covariate, sep = "")), data = modeldata[modeldata$group==j&!is.na(modeldata[,i]),]),
+                    "+", covariate, sep = "")), data = modeldata[modeldata[,group]==j&!is.na(modeldata[,i]),]),
                     error = function(e) NULL)
     if(length(model[[paste(i,j)]])>0 ){ 
     if(nrow(summary(model[[paste(i,j)]])$coef)>1){
     if(summary(model[[paste(i,j)]])$coef[covariate,4]!="NaN"&summary(model[[paste(i,j)]])$coef[covariate,4]!="NA"){
     tmp <- data.frame(res = resid(model[[paste(i,j)]],type="deviance"), pred = predict(model[[paste(i,j)]]))  
-          tmp$covariate <- modeldata[modeldata$group==j&!is.na(modeldata[,i]),covariate]
+          tmp$covariate <- modeldata[modeldata[,group]==j&!is.na(modeldata[,i]),covariate]
           tmp$resdev <- abs(tmp$res-0) 
          if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
           if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
           if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
           if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
    covariate_test[i, c(paste(covariate, j, "estimate",sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$coef[covariate,c(1,4)]# -c(1:(2 + length(confounders[confounders !=""])))
-                 } else print(paste("Model for",i,"showed violation against homoscedasticity!"))
-          } else print(paste("Model for",i,"showed violation against homoscedasticity!"))
-            } else print(paste("Model for",i,"in group",j,"showed violation against independence! You may be missing an important covariate."))
-              } else print(paste("Model for",i,"in group",j,"showed violation against independence! You may be missing an important covariate."))
-            } else print(paste("Model for",i,"in group",j,"failed!"))
-             } else print(paste("Model for",i,"in group",j,"failed!"))
-             } else print(paste("Model for",i,"in group",j,"failed!"))
+ }}}}}}}
                 }
             }
           for (i in names(covariate_test)[-1]) covariate_test[, i] <- as.numeric(covariate_test[, i])
-        #covariate_test <- na.omit(covariate_test)
          sig <- na.omit(names(apply(covariate_test[,grepl(pattern="_p",x=colnames(covariate_test))],MARGIN = 1,FUN = min)[apply(covariate_test[,grepl(pattern="_p",x=colnames(covariate_test))],MARGIN = 1,FUN = min)<p.cutoff]))
    
-            for (j in levels(dataset$group)) {
+            for (j in levels(dataset[,group])) {
                 covariate_test[, paste(covariate, j, "p","FDR", sep = "_")] <- p.adjust(covariate_test[, 
                   paste(covariate, j,"p",  sep = "_")], "fdr")
             }
 
-            write.table(covariate_test, paste(strsplit(taxonomic.table, split = "_")[[1]][3], 
-                "_ChangeTest_", covariate, "_", group, "_", select.by, select, 
+            write.table(covariate_test, paste("ChangeTest_", covariate, "_", group, "_", select.by, select, 
                 ".txt", sep = ""), quote = F, row.names = F, sep = "\t")
             
-for(h in levels(modeldata[,"group"])){            
-covariate_test_summary <- na.omit(covariate_test[,grepl(pattern=paste("_",h,"_",sep=""),x=names(covariate_test))])
-covariate_test_summary$class <-  unlist(lapply(rownames(covariate_test_summary), function(x) strsplit(x, split="_")[[1]][2]))
-covariate_test_summary <- covariate_test_summary[order(covariate_test_summary[,1]),]
-palette(c("skyblue", "yellowgreen", "pink", "turquoise2", "plum", 
-                  "darkorange", "lightyellow", "gray","royalblue", "olivedrab4", "red", "turquoise4", "purple", "darkorange3", "lightyellow4", "black"))
-
-if (quartz) quartz() 
-par(mar=c(4,20,2,2),cex.axis=0.5)
-barplot(covariate_test_summary[,1],horiz=T,names.arg = paste(rownames(covariate_test_summary),"p =",
-      round(covariate_test_summary[,2],digits=2)),las=2,col=as.factor(covariate_test_summary$class),
-      xaxt="n",xlab=paste("Estimated effect size of",covariate),main=paste(group, "=", h) )  
-abline(v=0)
-axis(side=1) 
-
-if (pdf) {
-  pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",covariate,"_",group, "_", select.by,select, "_", "CovariateTestResult.pdf", sep = "")) 
-par(mar=c(4,20,2,2),cex.axis=0.5)
-barplot(covariate_test_summary[,2],horiz=T,names.arg = paste(rownames(covariate_test_summary),"p =",
-      round(covariate_test_summary[,3],digits=2)),las=2,col=as.factor(covariate_test_summary$class),
-      xaxt="n",xlab=paste("Estimated effect size of",covariate))   
-abline(v=0)
-axis(side=1) 
-dev.off()} 
-}
-
        if (length(sig) > 0) {
       resids <- modeldata
     for(i in sig){
@@ -372,11 +447,11 @@ dev.off()}
            }
     dataset2 <- data.frame(resids)
         
-                df = na.omit(reshape2::melt(dataset2[, c(covariate, "group", sig)], id = c(covariate, "group")))
-                names(df) <- c("x", "gr", "variable", "value")
-                 df$variable <- sapply(df$variable, function(x) gsub(pattern = "_NA",replacement = "", x=x))
-                df$variable <- sapply(df$variable, function(x) gsub(pattern = "_incertae_sedis",replacement = "", x=x))
-                df$variable <- unlist(sapply(as.character(df$variable), function(x) strsplit(x, split = "_", fixed = T)[[1]][length(strsplit(x, split = "_", fixed = T)[[1]])]))
+    df = na.omit(reshape2::melt(dataset2[, c(covariate, group, sig)], id = c(covariate, group)))
+    names(df) <- c("x", "gr", "variable", "value")
+    df$variable <- sapply(df$variable, function(x) gsub(pattern = "_NA",replacement = "", x=x))
+    df$variable <- sapply(df$variable, function(x) gsub(pattern = "_incertae_sedis",replacement = "", x=x))
+    df$variable <- unlist(sapply(as.character(df$variable), function(x) strsplit(x, split = "_", fixed = T)[[1]][length(strsplit(x, split = "_", fixed = T)[[1]])]))
 
    p<- ggplot2::ggplot(df, ggplot2::aes(y=value, x=x,color=factor(gr)),environment = environment()) +
   ggplot2::stat_smooth(method = "lm", formula = y ~ x, ggplot2::aes(fill=factor(gr)),se=T) +
@@ -387,17 +462,114 @@ dev.off()}
   ggplot2::scale_color_manual(name=group,values=c('gray30','red','turquoise4','olivedrab4','purple','darkorange3','lightyellow4','black')[1:length(levels(factor(df[,'gr'])))])+ 
   ggplot2::scale_fill_manual(name=group,values=c('cornflowerblue','pink','turquoise2','yellowgreen','plum','darkorange','lightyellow','gray')[1:length(levels(factor(df[,'gr'])))])+
   ggplot2::theme(legend.position = "right",strip.background =  ggplot2::element_rect(color = "white",fill="white"))+
-      ggplot2::ylab('Deviance from expected') 
+  ggplot2::ylab('Deviance from expected') 
 
                 if (pdf) {
-                  pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3], 
-                    "_change_", covariate, "_", group, "_", select.by, select, 
+                  pdf(paste("ChangeTest", covariate, "_", group, "_", select.by, select, 
                     "_Covariateplot.pdf", sep = ""))
                   plot(p)
                   dev.off()
                 }
-                if (quartz) quartz() else x11()
+                quartz()
                 plot(p)
+                
+                
+#------------
+library(metacoder)
+    
+if(length(species.table)!=0){
+  sp <- colnames(species)
+} else{
+ if(length(genus.table)!=0){
+   sp <- colnames(genus)
+ } else{
+  if(length(family.table)!=0){
+    sp <- colnames(family)
+  } else{
+    if(length(order.table)!=0){
+      sp <- colnames(order)
+    } else{
+      if(length(class.table)!=0){
+        sp <- colnames(class)
+      } else sp <- colnames(phylum)
+    }
+  }
+}
+}
+
+sp <- intersect(sp,colnames(taxa))  
+ 
+for(h in unique(modeldata[,group])){ 
+covariate_test_group <-  cbind(covariate_test[,colnames(covariate_test)[grepl(pattern=paste("_",h,"_",sep=""),x=colnames(covariate_test))]])  
+covariate_test_summary <- covariate_test_group 
+if(nrow(na.omit(covariate_test_summary))>0){
+covariate_test_summary$name <- sapply(rownames(covariate_test_summary), function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
+covariate_test_summary[,paste(covariate,h,"estimate",sep="_")][covariate_test_summary[,paste(covariate,h,"p",sep="_")] > p.cutoff] <- 0
+covariate_test_summary2 <- covariate_test_summary[intersect(sp,rownames(covariate_test_summary)),]
+  
+seqs1 <- list()
+for(i in rownames(covariate_test_summary2)){
+  if(!is.na(covariate_test_summary2[i,paste(covariate,h,"p",sep="_")]))  if(covariate_test_summary2[i,paste(covariate,h,"p",sep="_")]<p.cutoff)  seqs1[[i]]<- covariate_test_summary2[i,paste(covariate,h,"estimate",sep="_")]
+}
+
+for(i in rownames(covariate_test_summary2)){
+  if(!is.na(covariate_test_summary2[i,paste(covariate,h,"p",sep="_")]))  if(covariate_test_summary2[i,paste(covariate,h,"p",sep="_")]>p.cutoff) seqs1[[i]]<- 0
+}
+
+abu <- list()
+for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
+
+newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+
+tmp2 <-  metacoder::extract_taxonomy(input=newseqs2,regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
+                         key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_")
+
+for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)&tmp2$taxon_data$name!="NA"]){
+if(tmp2$taxon_data$name[as.numeric(k)]%in%covariate_test_summary$name) tmp2$taxon_data$taxon_info_1[as.numeric(k)] <- covariate_test_summary[covariate_test_summary$name==tmp2$taxon_data$name[as.numeric(k)],paste(covariate,h,"estimate",sep="_")][1]
+}
+for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)])){
+ tmp2$taxon_data$taxon_info_1[as.numeric(k)] <-  mean(as.numeric(tmp2$taxon_data$taxon_info_1[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
+}
+
+
+treltaxa <- as.data.frame(t(reltaxa))
+treltaxa$name <-   sapply(rownames(treltaxa), function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
+
+for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)]){
+if(tmp2$taxon_data$name[as.numeric(k)]%in%treltaxa$name) tmp2$taxon_data$taxon_info_2[as.numeric(k)] <- rowMeans(treltaxa[treltaxa$name==tmp2$taxon_data$name[as.numeric(k)],-ncol(treltaxa)][1,])
+}
+
+for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)])){
+ tmp2$taxon_data$taxon_info_2[as.numeric(k)] <-  sum(as.numeric(tmp2$taxon_data$taxon_info_2[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
+}
+
+heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100, 
+                   node_label = ifelse(name == "NA", NA, name),
+                   node_color = as.numeric(taxon_info_1),
+                   node_color_range=c("royalblue","cornflowerblue","gray90","hotpink","red"),
+                   node_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   edge_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   node_color_axis_label = "Effect size",
+                   node_size_axis_label = "Average relative abundance (%)",
+          node_label_size_range=c(0.01,0.013),
+          node_label_size_trans="ln",
+          #node_label_size=0.03,
+          initial_layout = "reingold-tilford",
+          layout = "davidson-harel",
+          overlap_avoidance = 0.5, node_label_max=150, make_legend=T, 
+          node_size_trans="linear",
+          node_size_range=c(0.012,0.05),
+          node_color_trans="linear",
+          title=paste("Associations with", covariate,"in group", h), title_size=0.03,
+          output_file=paste(covariate,"_",h, "_", select.by, select,"_HeatTree.pdf",sep=""))
+
+
+}
+}
+#------------
+                
+                
+                
                 
                 
        }
@@ -412,9 +584,9 @@ dev.off()}
                   confounders[1], confounders[2], confounders[3], confounders[4], 
                   confounders[5], names(taxa), paste("baseline", names(taxa), sep = "")) != ""]])
  
-            for(i in unique(modeldata[,subject.ID])){ 
- modeldata[modeldata[,subject.ID]==i,names(taxa)[apply(taxa[metadata[,subject.ID]==i,names(taxa)], MARGIN=2,FUN=max)==0]]<-NA
-  } 
+#            for(i in unique(modeldata[,subject.ID])){ 
+# modeldata[modeldata[,subject.ID]==i,names(taxa)[apply(taxa[metadata[,subject.ID]==i,names(taxa)], MARGIN=2,FUN=max)==0]]<-NA
+#  } 
             for (i in names(taxa)) {
                 tryCatch(model[[i]] <- lm(as.formula(paste(i, 
                   "~baseline", i, "+", confounders[1], "+", confounders[2], 
@@ -431,50 +603,17 @@ dev.off()}
           if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
           if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
           if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-                  covariate_test[i, c(paste(covariate, "estimate", sep = "_"),paste(covariate, "p", sep = "_"))] <- summary(model[[i]])$coef[-c(1:(2 + length(confounders[confounders != ""]))),c(1, 4)]
-               } else print(paste("Model for",i,"showed violation against homoscedasticity!"))
-          } else print(paste("Model for",i,"showed violation against homoscedasticity!"))
-            } else print(paste("Model for",i,"showed violation against independence! You may be missing an important covariate."))
-              } else print(paste("Model for",i,"showed violation against independence! You may be missing an important covariate."))
-            } else print(paste("Model for",i,"failed!"))
-                   } else print(paste("Model for",i,"failed!"))
-                   } else print(paste("Model for",i,"failed!"))
+                  covariate_test[i, c(paste(covariate, "estimate", sep = "_"),paste(covariate, "p", sep = "_"))] <- summary(model[[i]])$coef[covariate,c(1, 4)]
+ }}}}}}}
             }
 
             covariate_test <- na.omit(covariate_test)
            
-          sig <-  rownames(covariate_test)[covariate_test[,3]<p.cutoff]
-   
-   
-            covariate_test[, paste(covariate,"p",  "FDR", sep = "_")] <- p.adjust(covariate_test[,paste(covariate,"p", sep = "_")], "fdr")
-            write.table(covariate_test, paste(strsplit(taxonomic.table, split = "_")[[1]][3], 
-                "_ChangeTest_", covariate, "_", select.by, select, ".txt", sep = ""), 
+          sig <-  rownames(covariate_test)[covariate_test[,paste(covariate, "p", sep = "_")]<p.cutoff]
+    covariate_test[, paste(covariate,"p",  "FDR", sep = "_")] <- p.adjust(covariate_test[,paste(covariate,"p", sep = "_")], "fdr")
+           
+     write.table(covariate_test, paste("ChangeTest_", covariate, "_", select.by, select, ".txt", sep = ""), 
                 quote = F, row.names = F, sep = "\t")
-
-
-covariate_test_summary <- covariate_test
-covariate_test_summary$class <-  unlist(lapply(rownames(covariate_test_summary), function(x) strsplit(x, split="_")[[1]][2]))
-covariate_test_summary <- covariate_test_summary[order(covariate_test_summary[,2]),]
-palette(c("skyblue", "yellowgreen", "pink", "turquoise2", "plum", 
-                  "darkorange", "lightyellow", "gray","royalblue", "olivedrab4", "red", "turquoise4", "purple", "darkorange3", "lightyellow4", "black"))
-
-if (quartz) quartz() 
-par(mar=c(4,20,2,2),cex.axis=0.5)
-barplot(covariate_test_summary[,2],horiz=T,names.arg = paste(rownames(covariate_test_summary),"p =",
-      round(covariate_test_summary[,3],digits=2)),las=2,col=as.factor(covariate_test_summary$class),
-      xaxt="n",xlab=paste("Estimated effect size of",covariate))   
-abline(v=0)
-axis(side=1) 
-
-if (pdf) {
-  pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",covariate,"_",group, "_", select.by,select, "_", "CovariateTestResult.pdf", sep = "")) 
-par(mar=c(4,20,2,2),cex.axis=0.5)
-barplot(covariate_test_summary[,2],horiz=T,names.arg = paste(rownames(covariate_test_summary),"p =",
-      round(covariate_test_summary[,3],digits=2)),las=2,col=as.factor(covariate_test_summary$class),
-      xaxt="n",xlab=paste("Estimated effect size of",covariate))   
-abline(v=0)
-axis(side=1) 
-dev.off()}
 
    
     if (length(sig) > 0) { 
@@ -506,15 +645,105 @@ dev.off()}
  
                 
                 if (pdf) {
-                  pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3], 
-                    "_change_", covariate, "_", select.by, select, "Covariateplot.pdf", 
+                  pdf(paste("ChangeTest", covariate, "_", select.by, select, "Covariateplot.pdf", 
                     sep = ""))
                   plot(p)
                   dev.off()
                 }
                 
-                if (quartz) quartz() else x11()
+                quartz()
                 plot(p)
+                
+#------------
+library(metacoder)
+    
+if(length(species.table)!=0){
+  sp <- colnames(species)
+} else{
+ if(length(genus.table)!=0){
+   sp <- colnames(genus)
+ } else{
+  if(length(family.table)!=0){
+    sp <- colnames(family)
+  } else{
+    if(length(order.table)!=0){
+      sp <- colnames(order)
+    } else{
+      if(length(class.table)!=0){
+        sp <- colnames(class)
+      } else sp <- colnames(phylum)
+    }
+  }
+}
+}
+
+
+covariate_test_summary <- covariate_test[,c(paste(covariate, "estimate", sep = "_"),paste(covariate, "p", sep = "_"))]
+covariate_test_summary$name <- sapply(rownames(covariate_test_summary), function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
+covariate_test_summary[,paste(covariate,"estimate",sep="_")][covariate_test_summary[,paste(covariate,"p",sep="_")] > p.cutoff] <- 0
+covariate_test_summary2 <- covariate_test_summary[intersect(sp,rownames(covariate_test_summary)),]
+  
+seqs1 <- list()
+for(i in rownames(covariate_test_summary2)){
+  if(!is.na(covariate_test_summary2[i,paste(covariate,"p",sep="_")]))  if(covariate_test_summary2[i,paste(covariate,"p",sep="_")]<p.cutoff)  seqs1[[i]]<- covariate_test_summary2[i,paste(covariate,"estimate",sep="_")]
+}
+
+for(i in rownames(covariate_test_summary2)){
+  if(!is.na(covariate_test_summary2[i,paste(covariate,"p",sep="_")]))  if(covariate_test_summary2[i,paste(covariate,"p",sep="_")]>p.cutoff) seqs1[[i]]<- 0
+}
+
+abu <- list()
+for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
+
+newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+
+tmp2 <-  metacoder::extract_taxonomy(input=newseqs2,regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
+                         key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_")
+
+for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)&tmp2$taxon_data$name!="NA"]){
+if(tmp2$taxon_data$name[as.numeric(k)]%in%covariate_test_summary$name) tmp2$taxon_data$taxon_info_1[as.numeric(k)] <- covariate_test_summary[covariate_test_summary$name==tmp2$taxon_data$name[as.numeric(k)],paste(covariate,"estimate",sep="_")][1]
+}
+for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)])){
+ tmp2$taxon_data$taxon_info_1[as.numeric(k)] <-  mean(as.numeric(tmp2$taxon_data$taxon_info_1[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
+}
+
+
+treltaxa <- as.data.frame(t(reltaxa))
+treltaxa$name <-  sapply(rownames(treltaxa), function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
+
+for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)]){
+if(tmp2$taxon_data$name[as.numeric(k)]%in%treltaxa$name) tmp2$taxon_data$taxon_info_2[as.numeric(k)] <- rowMeans(treltaxa[treltaxa$name==tmp2$taxon_data$name[as.numeric(k)],-ncol(treltaxa)][1,])
+}
+
+for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)])){
+ tmp2$taxon_data$taxon_info_2[as.numeric(k)] <-  sum(as.numeric(tmp2$taxon_data$taxon_info_2[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
+}
+
+heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100, 
+                   node_label = ifelse(name == "NA", NA, name),
+                   node_color = as.numeric(taxon_info_1),
+                   node_color_range=c("royalblue","cornflowerblue","gray90","hotpink","red"),
+                   node_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   edge_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   node_color_axis_label = "Effect size",
+                   node_size_axis_label = "Average relative abundance (%)",
+          node_label_size_range=c(0.01,0.013),
+          node_label_size_trans="ln",
+          #node_label_size=0.03,
+          initial_layout = "reingold-tilford",
+          layout = "davidson-harel",
+          overlap_avoidance = 0.5, node_label_max=100, make_legend=T, 
+          node_size_trans="linear",
+          node_size_range=c(0.012,0.05),
+          node_color_trans="linear",
+          title=paste("Associations with", covariate), title_size=0.03,
+          output_file=paste(covariate,"_",h, "_", select.by, select,"_HeatTree.pdf",sep=""))
+
+
+
+
+#------------
+
             }
              if(keep.result) return(covariate_test)
         }

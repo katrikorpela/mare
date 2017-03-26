@@ -1,7 +1,14 @@
 CorrelationMap <- function(taxonomic.table, meta, variables, select.by = NULL, 
                            selection = NULL,  outlier.cutoff = 3, readcount.cutoff = 0, 
-                           min.abundance = 0, min.prevalence = 0, quartz = T, pdf = F){
-    
+                           min.abundance = 0, min.prevalence = 0, pdf = F){
+if(Sys.info()[['sysname']] == "Linux") {
+  quartz <- function() {X11()}
+  }
+    if(Sys.info()[['sysname']] == "Windows") {
+  quartz <- function() {X11()}
+}
+ 
+
 taxa <- read.delim(taxonomic.table)
 taxa <- taxa[, colSums(taxa/rowSums(taxa) > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
   
@@ -13,7 +20,6 @@ taxa <- taxa[metadata$ReadCount > readcount.cutoff, ]
 metadata <- metadata[metadata$ReadCount > readcount.cutoff, ]
     
 if (length(select.by) != 0) {
-       # metadata$selection <- metadata[, select.by]
         taxa <- taxa[metadata[, select.by] == selection, ]
         metadata <- metadata[metadata[, select.by] == selection, ]
     }
@@ -50,7 +56,7 @@ spnames <- sapply(spnames, function(x) strsplit(x, split = "_",
 names(reltaxa) <- spnames
 metadata <- metadata[,variables]
  
-palette(c("black","firebrick4","forestgreen","skyblue","yellowgreen", "turquoise2", "plum", "darkorange", "gray","royalblue", "olivedrab4", "tomato", 
+palette(c("black","firebrick4","hotpink","skyblue","yellowgreen", "turquoise2", "plum", "darkorange", "gray","royalblue", "olivedrab4", "tomato", 
                       "turquoise4", "purple", "darkorange3", "lightyellow4"))
 n<-nrow(reltaxa)
 df<-n-2
@@ -67,18 +73,16 @@ correl.sym[correl.p>0.05]<-""
 
 if (pdf){
 pdf("CorrelatioMap.pdf");
- gplots::heatmap.2(correl,
-   #cor(log(reltaxa+0.000001),metadata,use="pairwise.complete.obs")[,colSums(abs(cor(log(reltaxa+0.000001),metadata,use="pairwise.complete.obs")),na.rm=T)>0],
-                  col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
+ gplots::heatmap.2(correl,col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
                   cellnote=correl.sym,,notecol = "black",
           keysize=1,key.xlab = "Correlation",margins=c(10,10),colRow=as.numeric(classnamesN))
 dev.off()
 }
-if (quartz) quartz() else x11()
-gplots::heatmap.2(correl,
-  #cor(log(reltaxa+0.000001),metadata,use="pairwise.complete.obs")[,colSums(abs(cor(log(reltaxa+0.000001),metadata,use="pairwise.complete.obs")),na.rm=T)>0],
-                  col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
-         cellnote=correl.sym,,notecol = "black", keysize=1,key.xlab = "Correlation",margins=c(10,10),colRow=as.numeric(classnamesN))
+quartz() 
+gplots::heatmap.2(correl, col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
+                  RowSideColors=classnamesN,
+         cellnote=correl.sym,notecol = "black", keysize=1,key.xlab = "Correlation",margins=c(10,10),
+         colRow=as.numeric(classnamesN))
 
 }
 }

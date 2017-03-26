@@ -50,7 +50,7 @@ readnumbers <- data.frame(sample=colnames(L3)[-c(1)],raw_reads=colSums(L3[,-1]),
             sep = "\t")
         write.table(species_table, "HITChip_species_table.txt",  quote = F, row.names = F, 
             sep = "\t")
-          write.table(species_table, "HITChip_annotated_readtable.txt",  quote = F, row.names = F, 
+          write.table(species_table, "HITChip_annotated_read_table.txt",  quote = F, row.names = F, 
             sep = "\t")
         write.table(otutable, "HITChip_otutable.txt",  quote = F, row.names = F, 
             sep = "\t")

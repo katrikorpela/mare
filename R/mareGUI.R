@@ -17,7 +17,7 @@ wdfunction <- function(dir){
 fguiWindow(title="mare", text="Welcome to mare! 
 Start by reading the help files and guides.
 To analyse your data, first do the pre-processing
-(functions ProcessReads and TaxonomicTables or Simple),
+(functions ProcessReads and TaxonomicTables),
 copy the files to a new folder for analysis and organise the data
 (functions CopyFiles and Organise),
 then explore the results by plotting
@@ -34,8 +34,6 @@ mgui(guidefunction, title = c("Help","Guides"),
 fguiNewMenu(c("Preprocess","SEPARATOR"))
 mgui(wdfunction, title = c("Preprocess", "Set working directory"), output=NULL, 
      argText = list(dir = "Write the full path to the working directory"))
-mgui(SimpleGUI, title = c("Preprocess", "Simple short cut to taxonomic tables"), output=NULL, 
-     argFilename=list(usearch.path=NULL))
 mgui(ProcessReads, title = c("Preprocess", "ProcessReads"), output=NULL, 
      argFilename=list(usearch.path=NULL))
 mgui(TaxonomicTableGUI, title = c("Preprocess", "TaxonomicTable"), output=NULL,

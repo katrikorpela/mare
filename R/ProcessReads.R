@@ -3,8 +3,8 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
                          name.separator = "_", 
     usearch.path, forward.primer = NULL, reverse.primer = NULL, merge = F, 
     min.merged.length = NULL, min.overlap = NULL, max.mismatches = NULL, 
-    truncate = F, 
-    filter = F, trunc.quality = 2, max.expected.error = 1, 
+    pool = F, truncate = T, 
+    filter = T, trunc.quality = 2, max.expected.error = 1, 
     readlength = NULL, min.read.prevalence = 0.0001, folder.name = "") {
     
   if (length(list.files(pattern = paste(folder.name, "ProcessedReads", sep = ""))) == 0) {
@@ -19,7 +19,7 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
     readnumbers <- data.frame(sample = sapply(as.character(forward.reads), 
                                               function(x) strsplit(x, split = name.separator,fixed=F)[[1]][1]), 
                               raw_reads = sapply(forward.reads, function(x) Biostrings::fastq.geometry(x)[1])) 
-    
+   if(pool) readnumbers$raw_reads <-  readnumbers$raw_reads * 2
     
     if (length(forward.primer) != 0) {
         for (i in forward.reads) {
@@ -30,18 +30,20 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
                 full = F, compress = F, qualityType = "Auto")
         }
     } else {
-        for (i in seq_along(forward.reads)) {
-            system(paste("cp ", forward.reads[i], " ", wd, forward.reads[i], sep = ""))
-          
-        }
-        if (length(list.files(path = wd, pattern = "*.gz$")) > 0) {
-            system(paste("gunzip", " ", wd, "*fastq.gz", sep = ""))
-        }
-
-          for (i in grep(list.files(path=wd), pattern='R2', inv=T, value=T)) {
-      system(paste("mv ", wd, i, " " , wd, sapply(i, function(x) strsplit(x, name.separator, fixed = F)[[1]][1]),  name.separator ,"fwd.fastq", sep = ""))
-       }
-    }
+      for (i in seq_along(forward.reads)) {
+         if(grepl(x=forward.reads[i], pattern=".gz$")){
+         system(paste("cp ", forward.reads[i], " ", wd, forward.reads[i], sep = ""))
+         system(paste("gunzip ",wd, forward.reads[i], sep=""))  
+         system(paste("mv ", wd, strsplit(forward.reads[i],split=".gz")[[1]][1], " ", wd, strsplit(forward.reads[i],split=name.separator, fixed = F)[[1]][1],  
+                    name.separator ,"fwd.fastq", sep = ""))
+      } else{
+        system(paste("cp ", forward.reads[i], " ", wd, forward.reads[i], sep = ""))
+         system(paste("mv ", wd, forward.reads[i], " ", wd, strsplit(forward.reads[i],split=name.separator, fixed = F)[[1]][1],  
+                    name.separator ,"fwd.fastq", sep = ""))
+      }
+      }
+      }
+  
     trimmed_fwd <- paste(wd, list.files(path = wd, pattern = "fwd.fastq"),  sep = "")
     
     if (length(reverse.reads) != 0) {
@@ -54,18 +56,19 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
                   full = F, compress = F, qualityType = "Auto")
             }
         } else {
-        for (i in seq_along(reverse.reads)) {
-            system(paste("cp ", reverse.reads[i], " ", wd, reverse.reads[i], sep = ""))
-        }
-        if (length(list.files(path = wd, pattern = "*.gz$")) > 0) {
-            system(paste("gunzip", " ", wd, "*fastq.gz", sep = ""))
-        }
-       for (i in list.files(path=wd, pattern="R2")) {
-      system(paste("mv ", wd, i, " " , wd, sapply(i, 
-                function(x) strsplit(x, name.separator, fixed = F)[[1]][1]), 
-                name.separator ,"rev.fastq", sep = ""))
-       }
-        }
+      for (i in seq_along(reverse.reads)) {
+         if(grepl(x=reverse.reads[i], pattern=".gz$")){
+         system(paste("cp ", reverse.reads[i], " ", wd, reverse.reads[i], sep = ""))
+         system(paste("gunzip ",wd, reverse.reads[i], sep=""))  
+         system(paste("mv ", wd, strsplit(reverse.reads[i],split=".gz")[[1]][1], " ", wd, strsplit(reverse.reads[i],split=name.separator, fixed = F)[[1]][1],  
+                    name.separator ,"rev.fastq", sep = ""))
+      } else{
+        system(paste("cp ", reverse.reads[i], " ", wd, reverse.reads[i], sep = ""))
+         system(paste("mv ", wd, reverse.reads[i], " ", wd, strsplit(reverse.reads[i],split=name.separator, fixed = F)[[1]][1],  
+                    name.separator ,"rev.fastq", sep = ""))
+      }
+      }
+      }
       trimmed_rev <- paste(wd, list.files(path = wd, pattern = "rev.fastq"),  sep = "")
     }
     reads <- paste(wd, list.files(path = wd, pattern = "fwd.fastq"), sep = "")
@@ -82,12 +85,23 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
         }
         reads <- paste(wd, list.files(path = wd, pattern = "merged.fastq"), sep = "")
     
-    } else if (truncate) {
-        for (i in seq_along(trimmed_fwd)) {
-            system(paste(usearch.path, " -fastx_truncate ", trimmed_fwd[i], 
-                " -trunclen ", readlength, " -fastqout ", strsplit(trimmed_fwd[i], 
+    } else if (pool) {
+       for (i in seq_along(trimmed_fwd)) {
+        system(paste("cat ", trimmed_fwd[i], " ", trimmed_rev[i], " > ", strsplit(trimmed_fwd[i], name.separator , fixed = F)[[1]][1], 
+                "_pooled.fastq", sep = "")) 
+         system(paste("rm ", trimmed_fwd[i], sep = ""))
+        system(paste("rm ", trimmed_rev[i], sep = ""))
+       } 
+      reads <- paste(wd, list.files(path = wd, pattern = "pooled.fastq"), sep = "")
+    }
+      
+     
+      if (truncate) {
+        for (i in seq_along(reads)) {
+            system(paste(usearch.path, " -fastx_truncate ", reads[i], 
+                " -trunclen ", readlength, " -fastqout ", strsplit(reads[i], 
                   name.separator, fixed = F)[[1]][1], name.separator ,"truncated.fastq", sep = ""))
-           system(paste("rm ", trimmed_fwd[i], sep = ""))
+           system(paste("rm ", reads[i], sep = ""))
         }
         reads <- paste(wd, list.files(path = wd, pattern = "truncated.fastq"),  sep = "")
      }
@@ -157,8 +171,10 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
     system(paste(usearch.path, " -cluster_otus ", wd, "nonchimeric.fasta", 
         " -otus ", wd, "otu.fasta", " -otu_radius_pct 3", 
         " -relabel OTU_", " -sizein ", " -sizeout -uparseout ", wd, "OTUmapping.txt", sep = ""))
-
-    otumapping <- read.delim(paste(wd,"OTUmapping.txt",sep=""),header=F)
+  
+    system(paste("echo ", shQuote('V1\tV2\tV3\tV4\tV5\tV6'), " > ", wd, "otumappingheader.txt", sep=""))
+    system(paste("cat ", wd, "otumapping.txt >> ", wd, "otumappingheader.txt",sep=""))
+    otumapping <- read.delim(paste(wd,"OTUmappingheader.txt",sep=""),header=T)
     otumapping$V6 <- as.character(otumapping$V6)
     otumapping$V5 <- as.character(otumapping$V5)
     otumapping$V6[otumapping$V6==""] <-  otumapping$V5[otumapping$V6==""] 
