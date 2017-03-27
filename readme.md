@@ -1,6 +1,6 @@
 # mare
 
-The mare R package is an easy-to-use pipeline for microbiota analysis based on 16S-amplicon reads. It takes the raw reads, creates taxonomic tables, visualises the results, and finally identifies organisms significantly associated with variables of interest. For OTU clustering and taxonomic annotation the package relies on USEARCH (at least version 8.1.1756_i86osx32, possibly also later versions), which you need to obtain first.
+The mare R package is an easy-to-use pipeline for microbiota analysis based on 16S-amplicon reads. It takes the raw reads, creates taxonomic tables, visualises the results, and finally identifies organisms significantly associated with variables of interest. For read processing, OTU clustering, and taxonomic annotation the package relies on USEARCH (at least version 8.1.1756_i86osx32, possibly also later versions), which you need to obtain first. Mare has been tested with reads from Illumina HiSeq and MiSeq, 454 pyrosequencing, and Iontorrent, and most functions can be used with microarray data, as well.
 
 For more information see the files mareGuide and mareBackground. To open the files, when you have mare installed, you can run: 
 
@@ -18,7 +18,7 @@ Katri Korpela (2016). mare: Microbiota Analysis in R Easily. R package version 1
 
 First install the required packages:
 
-install.packages(c("devtools", "R2admb", "R2admb", "vegan", "sp", "gstat", "Hmisc", "beanplot", "stringr", "MASS", "seqinr", "ggplot2", "reshape2", "qgraph", "gplots"))
+install.packages(c("devtools", "R2admb", "vegan", "sp", "gstat", "Hmisc", "beanplot", "stringr", "MASS", "seqinr", "ggplot2", "reshape2", "qgraph", "gplots", "metacoder"))
 
 If you want to use the graphical user interface, install also the package fgui:
 install.packages("fgui")
@@ -52,6 +52,8 @@ Clusters: Performs clustering of the bacterial taxa and plots a correlation netw
 
 ChangeTest: Tests for differences between groups or associations with covariates in the change of bacterial abundances from one time point to another
 
+CombineProjects: Combines the metadata files and taxonomic tables of two projects that were processed separately.
+
 CommonTaxa: Identifies the most abundant and common taxa in the dataset
 
 CopyFiles: Copies the taxonomic tables and metadata to a new folder for analysis
@@ -68,15 +70,17 @@ GroupPlot: Plots group comparisons
 
 GroupTest: Tests for differences between groups in bacterial abundances
 
+HITChip2Seq: Transforms HITChip data into the same format as sequencing data.
+
 mareGUI: Graphical user interface for mare
 
 Organise: Organises the taxonomic tables based on the metadata file
 
+PathModel: Builds a model for the response variable or for the bacterial taxa, using the bacterial taxa and other variables as explanatory variables in the same model.
+
 PCoA: Pricipal Coordinates Analysis
 
 ProcessReads: Processes the sequencing reads
-
-Simple: A short-cut function to format the database, process the reads and create taxonomic tables
 
 TaxonomicTable: Creates taxonomic tables
 
