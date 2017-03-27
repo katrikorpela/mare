@@ -46,7 +46,7 @@ devtools::install_github("katrikorpela/mare")
 
 Blast: Creates a BLAST-based taxonomic table
 
-CAZy: Does carbohydrate enzyme abundance predictions based on the species table
+CAZy: Does carbohydrate enzyme abundance predictions based on the genus table
 
 Clusters: Performs clustering of the bacterial taxa and plots a correlation network
 
