@@ -10,7 +10,7 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
   if (length(list.files(pattern = paste(folder.name, "ProcessedReads", sep = ""))) == 0) {
        system(paste("mkdir ", folder.name, "ProcessedReads", sep = ""))
   } else {
-    system(paste("rm -r", folder.name, "ProcessedReads", sep = "")) 
+    system(paste("rm -r ", folder.name, "ProcessedReads", sep = "")) 
     system(paste("mkdir ", folder.name, "ProcessedReads", sep = ""))
    }
     
@@ -88,7 +88,7 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
     } else if (pool) {
        for (i in seq_along(trimmed_fwd)) {
         system(paste("cat ", trimmed_fwd[i], " ", trimmed_rev[i], " > ", strsplit(trimmed_fwd[i], name.separator , fixed = F)[[1]][1], 
-                "_pooled.fastq", sep = "")) 
+                name.separator,"pooled.fastq", sep = "")) 
          system(paste("rm ", trimmed_fwd[i], sep = ""))
         system(paste("rm ", trimmed_rev[i], sep = ""))
        } 
