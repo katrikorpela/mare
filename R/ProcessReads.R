@@ -173,8 +173,8 @@ ProcessReads <- function(forward.reads = list.files(pattern = "_R1_"),
         " -relabel OTU_", " -sizein ", " -sizeout -uparseout ", wd, "OTUmapping.txt", sep = ""))
   
     system(paste("echo ", shQuote('V1\tV2\tV3\tV4\tV5\tV6'), " > ", wd, "otumappingheader.txt", sep=""))
-    system(paste("cat ", wd, "otumapping.txt >> ", wd, "otumappingheader.txt",sep=""))
-    otumapping <- read.delim(paste(wd,"OTUmappingheader.txt",sep=""),header=T)
+    system(paste("cat ", wd, "OTUmapping.txt >> ", wd, "otumappingheader.txt",sep=""))
+    otumapping <- read.delim(paste(wd,"otumappingheader.txt",sep=""),header=T)
     otumapping$V6 <- as.character(otumapping$V6)
     otumapping$V5 <- as.character(otumapping$V5)
     otumapping$V6[otumapping$V6==""] <-  otumapping$V5[otumapping$V6==""] 
