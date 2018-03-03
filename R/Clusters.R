@@ -1,5 +1,5 @@
 Clusters <- function(taxonomic.table, meta, N.taxa = NULL,  readcount.cutoff = 0,
-                     minimum.correlation = 0.5, minimum.network = 1, cluster.similarity = 1,
+                     minimum.correlation = 0.5, minimum.network = 1,
                       select.by = NULL, select = NULL, keep.result = F, pdf = F){
 if(Sys.info()[['sysname']] == "Linux") {
   quartz <- function() {X11()}
@@ -67,10 +67,10 @@ qgraph::qgraph(g2.cor2,vsize=5,rescale=T,repulsion=0.8,
                layout="spring",diag=F,
        legend.cex=0.5,
        groups=classnames,
-       color=c("skyblue", "yellowgreen", "pink", "turquoise2", "plum", 
-                    "darkorange", "lightyellow", "gray","royalblue", 
-                    "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
-                    "lightyellow4", "black"),
+       color=c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","gray","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
+       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
+       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4'),
        label.prop=0.99)
 mtext(side=3,text="Correlations",line=2)
 
@@ -86,10 +86,10 @@ qgraph::qgraph(g2.cor2,vsize=5,rescale=T,repulsion=0.8,
           labels=substr(spnames,start=1,stop=6),layout="spring",diag=F,
        legend.cex=0.5,label.prop=0.99,borders=F, negCol = "red",posCol="yellowgreen",
        groups=classnames,
-       color=c("skyblue", "yellowgreen", "pink", "turquoise2", "plum", 
-                    "darkorange", "lightyellow", "gray","royalblue", 
-                    "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
-                    "lightyellow4", "black"))
+       color=c("gray","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
+       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
+       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4'))
 mtext(side=3,text="Correlations",line=2)
 
 networks <- data.frame(metadata,taxatable)

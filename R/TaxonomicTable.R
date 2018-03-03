@@ -1,4 +1,7 @@
-TaxonomicTable <- function(usearch.path, refDB, folder.name = "", confidence.cutoff = 0.5) {
+TaxonomicTable <- function(usearch.path, 
+                           refDB = system.file("extdata/silva_full.udb",package="mare"), 
+                           folder.name = "", 
+                           confidence.cutoff = 0.5) {
     
     wd <- getwd()
     
@@ -71,17 +74,19 @@ TaxonomicTable <- function(usearch.path, refDB, folder.name = "", confidence.cut
             split = "s:")[[1]][2], split = "[(]")[[1]][1]
         taxonomy$species <- gsub("_","",taxonomy$species)
         taxonomy$species <- paste(taxonomy$genus, taxonomy$species, sep = "_")
-         annotated_readtable <- merge(taxonomy, readfile, by = "OTUId", all = T)
+         
+        annotated_readtable <- merge(taxonomy, readfile, by = "OTUId", all = T)
          species_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = annotated_readtable$species), sum)
          write.table(species_table, paste(wd, "/", folder.name, "TaxonomicTables/", 
             folder.name, OTU, "_species_table.txt", sep = ""), quote = F, row.names = F, 
             sep = "\t")
-         readtable <- annotated_readtable[,-c(2:8)]
+         
+         readtable <- annotated_readtable[,-c(3:8)]
          
     } else {
          if(grepl(pattern=".udb",x=refDB)){   
-        taxonomy <- read.delim(paste(wd, "/", folder.name, "TaxonomicTables/", folder.name, OTU, "taxonomy.txt", sep = ""), header = F)[, -c(2,4)]
-        names(taxonomy) <- c("OTUId", "taxonomy")
+        taxonomy <- read.delim(paste(wd, "/", folder.name, "TaxonomicTables/", folder.name, OTU, "taxonomy.txt", sep = ""), header = F)[, -c(4)]
+        names(taxonomy) <- c("OTUId", "conf","taxonomy")
         
          taxonomy$genus <- "NA"
         for (j in 1:nrow(taxonomy)) taxonomy$genus[j] <- strsplit(as.character(taxonomy$taxonomy[j]), 
@@ -109,11 +114,11 @@ TaxonomicTable <- function(usearch.path, refDB, folder.name = "", confidence.cut
         
         annotated_readtable <- merge(taxonomy, readfile, by = "OTUId", all = T)
        
-        genus_table <- aggregate(annotated_readtable[, -c(1:7)], by = list(taxon = annotated_readtable$genus), sum)
-        family_table <- aggregate(annotated_readtable[, -c(1:7)], by = list(taxon = annotated_readtable$family), sum)
-        order_table <- aggregate(annotated_readtable[, -c(1:7)], by = list(taxon = annotated_readtable$order), sum)
-        class_table <- aggregate(annotated_readtable[, -c(1:7)], by = list(taxon = annotated_readtable$class), sum)
-        phylum_table <- aggregate(annotated_readtable[, -c(1:7)], by = list(taxon = annotated_readtable$phylum), sum)
+        genus_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = annotated_readtable$genus), sum)
+        family_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = annotated_readtable$family), sum)
+        order_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = annotated_readtable$order), sum)
+        class_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = annotated_readtable$class), sum)
+        phylum_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = annotated_readtable$phylum), sum)
         
         write.table(genus_table, paste(wd, "/", folder.name, "TaxonomicTables/", 
             folder.name, OTU, "_genus_table.txt", sep = ""), quote = F, row.names = F, 
@@ -130,16 +135,15 @@ TaxonomicTable <- function(usearch.path, refDB, folder.name = "", confidence.cut
         write.table(phylum_table, paste(wd, "/", folder.name, "TaxonomicTables/", 
             folder.name, OTU, "_phylum_table.txt", sep = ""), quote = F, row.names = F, 
             sep = "\t")
-        readtable <- annotated_readtable[,-c(2:7)]
+        readtable <- annotated_readtable[,-c(3:8)]
   
          } else print("RefDB must be in .udb format if confidence.cutoff is not 0!")
     }
         
     
-    readtable$OTUId<-as.character(readtable$OTUId)
+    readtable$OTUId<-as.character(paste(readtable[,1],readtable[,2],sep=";"))
     names(readtable)[1]<-"taxon"
-    for(i in na.omit(unique(annotated_readtable$genus))) readtable$taxon[annotated_readtable$genus==i&!is.na(annotated_readtable$genus)] <- paste(i,"read",1:nrow(annotated_readtable[annotated_readtable$genus==i&!is.na(annotated_readtable$genus),]),sep="_")
-    readtable <- readtable[order(readtable$taxon),] 
+    readtable <- readtable[,-2]
     
      write.table(readtable, paste(wd, "/", folder.name, "TaxonomicTables/", 
             folder.name, OTU, "_annotated_read_table.txt", sep = ""), quote = F, row.names = F, 
@@ -148,7 +152,7 @@ TaxonomicTable <- function(usearch.path, refDB, folder.name = "", confidence.cut
 library(metacoder)     
      
 gen <- genus_table
-rownames(gen) <- gen$taxon
+rownames(gen) <- paste("Bacteria",gen$taxon,sep="_")
 gen <- gen[,-1]
 
 seqs <- list()
@@ -157,7 +161,7 @@ for(i in rownames(gen)){
      if(gen[i,h]>0) seqs[[paste(h,i)]]<- round(gen[i,h]/1000)
   }
 }
-newseqs <- rep(names(seqs), seqs)
+newseqs <- paste("Bacteria_",rep(names(seqs), seqs))
 
 tmp <-  extract_taxonomy(input=newseqs,regex = "^(.*)\\ (.*)",
                          key=c(id = "obs_info","class"),class_sep = "_")
@@ -166,7 +170,7 @@ heat_tree(tmp, node_size = n_obs*1000,
                     node_label = ifelse(name == "NA", NA, name), 
                     node_color = n_obs*1000,
                     node_color_axis_label = "Number of reads per taxon",
-                    node_color_range=c("gray90","skyblue","pink","hotpink","red","firebrick"),
+          node_color_range=c("gray90","aliceblue","powderblue","cornflowerblue","royalblue4"),
                     initial_layout = "reingold-tilford", layout = "davidson-harel",
                     node_size_range=c(0.01,0.04),
                      overlap_avoidance = 0.5,

@@ -1,5 +1,6 @@
 PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, group2 = NULL,
-    components = c(1, 2), background.variable = NULL, colour.scheme = terrain.colors, legendplace = "topright", 
+    components = c(1, 2), background.variable = NULL, colour.scheme = terrain.colors, 
+    ellipse = F, hull = F, spider = F, legendplace = "topright", 
     select.by = NULL, select = NULL, relative = F, pdf = F, keep.result = F) {
     
    if(Sys.info()[['sysname']] == "Linux") {
@@ -42,7 +43,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
     
     pcoa <- vegan::capscale(taxa ~ 1, distance = "bray")
     spcoa <- summary(pcoa)
-    
+  
     if (length(group) != 0) {
       if (length(group2) != 0) {
     ado <- vegan::adonis(taxa ~ groupvar + groupvar2, method = "bray")$aov.tab
@@ -62,7 +63,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
     for(i in rownames(pctest)) pctest[i,paste("MDS",components[2],"p",sep="")]<-cor.test(pc[,paste("MDS",components[2],sep="")],log(pc[,i]+1))$p.value
 
     
-    if(nrow(meta)<50) pointsize <- 50/nrow(meta) else pointsize <- 1
+    if(nrow(meta)<30) {pointsize <- 30/nrow(meta)} else pointsize <- 1
     
     op <- par(mar = c(3, 3, 1, 1), xpd = T, cex.lab = 1.5, cex.axis = 1.5, mgp = c(1.5, 0.3, 0), tck = -0.01)
    
@@ -80,7 +81,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
             locations = ~MDS1 + MDS2, data = na.omit(temp[, c(background.variable,  "MDS1", "MDS2")]), newdata = grd)
         
         if (pdf) {
-            pdf("PCoA.pdf")
+             pdf(paste("PCoA", group, group2,".pdf", sep="_"))
             plot(spcoa$sites[, components[2]] ~ spcoa$sites[, components[1]], type = "n", ylim = (range(ylimit) * 0.94), 
             xlim = (range(xlimit) * 0.94), xlab = paste("Component ", components[1],  " (", 100 * round(spcoa$cont$importance[2, 
             components[1]], digits = 2), "%)", sep = ""), ylab = paste("Component ", components[2], 
@@ -90,7 +91,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
                 points(spcoa$sites[, components[2]] ~ spcoa$sites[, components[1]], pch = 21 + groupvar2,  bg = as.factor(meta[,group]), col="white", cex = pointsize)
                 legend(legendplace, legend = levels(as.factor(meta[,group])), title = group, pch = 21, pt.bg = c(1:length(levels(as.factor(meta[,group])))),  bty = "n",col="white")
                 if(length(group2)!=0){
-                legend(legendplace,inset=c(0.2,0),legend = levels(as.factor(meta[,group2])),  title = group2, pch = 21+unique(groupvar2)[order(unique(groupvar2))], col="black",pt.bg = "white",  bty = "n")
+                legend(legendplace,inset=c(0.5,0),legend = levels(as.factor(meta[,group2])),  title = group2, pch = 21+unique(groupvar2)[order(unique(groupvar2))], col="black",pt.bg = "white",  bty = "n")
                 }
                 mtext(side = 1, line = -3, adj = 0.1, text = paste(group,": ",round(100 * ado[1, 5]), "%  of variation explained", ", p = ", ado[1, 6], sep = ""))
                if(length(group2) != 0) {
@@ -98,7 +99,25 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
                }
                  } else {
                 points(spcoa$sites[, components[2]] ~ spcoa$sites[,components[1]], pch = 21, bg = "black",col="white", cex = pointsize)
+                 }
+            if(spider & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordispider(pcoa,groups=as.factor(meta[,group]),
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,lwd=3)
             }
+          }
+          if(hull & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordihull(pcoa,groups=as.factor(meta[,group]),draw="polygon",
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,border=i,lwd=3)
+            }
+          }
+          if(ellipse & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordiellipse(pcoa,groups=as.factor(meta[,group]),draw="polygon",kind="sd",
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,border=i,lwd=3)
+            }
+          }
             par(fig = c(0.1, 0.9, 0.88, 0.99), new = T, mar = c(2, 0, 0, 0),  mgp = c(0.5, 0, 0), xpd = F, tck = 0.01)
             plot(seq(1, 50, 1), rep(1, 50), col = colour.scheme(50), pch = 15, cex = 10, axes = F, ylab = "", xlab = background.variable)
             axis(side = 1, at = c(3, 47), labels = c("Low", "High"))
@@ -112,9 +131,9 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
             image(IDW, col = colour.scheme(50), use.raster = T, add = T)
             if (length(group) != 0) {
                 points(spcoa$sites[, components[2]] ~ spcoa$sites[, components[1]], pch = 21 + groupvar2,  bg = as.factor(meta[,group]), col="white", cex = pointsize)
-                legend(legendplace, legend = levels(as.factor(meta[,group])), title = group, pch = 21, pt.bg = c(1:length(levels(as.factor(meta[,group])))),  bty = "n",col="white")
+              legend(legendplace, legend = levels(as.factor(meta[,group])), title = group, pch = 21, pt.bg = c(1:length(levels(as.factor(meta[,group])))),  bty = "n",col="white")
                 if(length(group2)!=0){
-                legend(legendplace,inset=c(0.2,0),legend = levels(as.factor(meta[,group2])),  title = group2, pch = 21+unique(groupvar2)[order(unique(groupvar2))], col="black",pt.bg = "white",  bty = "n")
+                legend(legendplace,inset=c(0.5,0),legend = levels(as.factor(meta[,group2])),  title = group2, pch = 21+unique(groupvar2)[order(unique(groupvar2))], col="black",pt.bg = "white",  bty = "n")
                 }
                 mtext(side = 1, line = -3, adj = 0.1, text = paste(group,": ",round(100 * ado[1, 5]), "%  of variation explained", ", p = ", ado[1, 6], sep = ""))
                if(length(group2) != 0) {
@@ -122,7 +141,26 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
                }
                    } else {
                 points(spcoa$sites[, components[2]] ~ spcoa$sites[,components[1]], pch = 21, bg = "black",col="white", cex = pointsize)
+                   }
+            
+          if(spider & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordispider(pcoa,groups=as.factor(meta[,group]),
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,lwd=3)
             }
+          }
+          if(hull & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordihull(pcoa,groups=as.factor(meta[,group]),draw="polygon",
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,border=i,lwd=3)
+            }
+          }
+          if(ellipse & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordiellipse(pcoa,groups=as.factor(meta[,group]),draw="polygon",kind="sd",
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,border=i,lwd=3)
+            }
+          }
             par(fig = c(0.1, 0.9, 0.88, 0.99), new = T, mar = c(2, 0, 0, 0),  mgp = c(0.5, 0, 0), xpd = F, tck = 0.01)
             plot(seq(1, 50, 1), rep(1, 50), col = colour.scheme(50), pch = 15, cex = 10, axes = F, ylab = "", xlab = background.variable)
             axis(side = 1, at = c(3, 47), labels = c("Low", "High"))
@@ -130,7 +168,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
     } else {
       
     if (pdf) {
-         pdf("PCoA.pdf")
+         pdf(paste("PCoA", group, group2,".pdf", sep="_"))
        plot(spcoa$sites[, components[2]] ~ spcoa$sites[, components[1]], type = "n", ylim = (range(ylimit) * 0.94), 
             xlim = (range(xlimit) * 0.94), xlab = paste("Component ", components[1],  " (", 100 * round(spcoa$cont$importance[2, 
             components[1]], digits = 2), "%)", sep = ""), ylab = paste("Component ", components[2], 
@@ -139,7 +177,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
                 points(spcoa$sites[, components[2]] ~ spcoa$sites[, components[1]], pch = 21 + groupvar2,  bg = as.factor(meta[,group]), col="white", cex = pointsize)
                 legend(legendplace, legend = levels(as.factor(meta[,group])), title = group, pch = 21, pt.bg = c(1:length(levels(as.factor(meta[,group])))),  bty = "n",col="white")
                 if(length(group2)!=0){
-                legend(legendplace,inset=c(0.2,0),legend = levels(as.factor(meta[,group2])),  title = group2, pch = 21+unique(groupvar2)[order(unique(groupvar2))], col="black",pt.bg = "white",  bty = "n")
+                legend(legendplace,inset=c(0.5,0),legend = levels(as.factor(meta[,group2])),  title = group2, pch = 21+unique(groupvar2)[order(unique(groupvar2))], col="black",pt.bg = "white",  bty = "n")
                 }
                mtext(side = 1, line = -3, adj = 0.1, text = paste(group,": ",round(100 * ado[1, 5]), "%  of variation explained", ", p = ", ado[1, 6], sep = ""))
                if(length(group2) != 0) {
@@ -149,6 +187,24 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
                 points(spcoa$sites[, components[2]] ~ spcoa$sites[,components[1]], pch = 21, bg = "black",col="white", cex = pointsize)
             }
           axis(side = 1, at = c(3, 47), labels = c("Low", "High"))
+          if(spider & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordispider(pcoa,groups=as.factor(meta[,group]),
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,lwd=3)
+            }
+          }
+          if(hull & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordihull(pcoa,groups=as.factor(meta[,group]),draw="polygon",
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,border=i,lwd=3)
+            }
+          }
+          if(ellipse & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordiellipse(pcoa,groups=as.factor(meta[,group]),draw="polygon",kind="sd",
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,border=i,lwd=3)
+            }
+          }
       dev.off()
     }
       
@@ -161,7 +217,7 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
                 points(spcoa$sites[, components[2]] ~ spcoa$sites[, components[1]], pch = 21 + groupvar2,  bg = as.factor(meta[,group]), col="white", cex = pointsize)
                 legend(legendplace, legend = levels(as.factor(meta[,group])), title = group, pch = 21, pt.bg = c(1:length(levels(as.factor(meta[,group])))),  bty = "n",col="white")
                 if(length(group2)!=0){
-                legend(legendplace,inset=c(0.2,0),legend = levels(as.factor(meta[,group2])),  title = group2, pch = 21+unique(groupvar2)[order(unique(groupvar2))], col="black",pt.bg = "white",  bty = "n")
+                legend(legendplace,inset=c(0.5,0),legend = levels(as.factor(meta[,group2])),  title = group2, pch = 21+unique(groupvar2)[order(unique(groupvar2))], col="black",pt.bg = "white",  bty = "n")
                 }
                   mtext(side = 1, line = -3, adj = 0.1, text = paste(group,": ",round(100 * ado[1, 5]), "%  of variation explained", ", p = ", ado[1, 6], sep = ""))
                if(length(group2) != 0) {
@@ -170,7 +226,24 @@ PCoA <- function(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, grou
                 points(spcoa$sites[, components[2]] ~ spcoa$sites[,components[1]], pch = 21, bg = "black",col="white", cex = pointsize)
             }
           axis(side = 1, at = c(3, 47), labels = c("Low", "High"))
-      
+     if(spider & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordispider(pcoa,groups=as.factor(meta[,group]),
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,lwd=3)
+            }
+          }
+          if(hull & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordihull(pcoa,groups=as.factor(meta[,group]),draw="polygon",
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,border=i,lwd=3)
+            }
+          }
+          if(ellipse & length(group) != 0){
+            for(i in seq_along(levels(as.factor(meta[,group])))){  
+            vegan::ordiellipse(pcoa,groups=as.factor(meta[,group]),draw="polygon",kind="sd",
+                                 show.groups=levels(as.factor(meta[,group]))[i],choices=components,col=i,border=i,lwd=3)
+            }
+          } 
     }
     
    if(keep.result)     return(list(pctest,pc))

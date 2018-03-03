@@ -18,8 +18,8 @@ nam <- getnames(taxdir=NCBItaxonomy)
 ranks <- list()
 tax <- list()
 for(i in taxonomy$id){ 
-  ranks[[paste("rank",i,sep="")]] <- getrank(allparents(id=i, taxdir=NCBItaxonomy, nodes=nod), taxdir=NCBItaxonomy, nodes=nod)
-  tax[[paste("tax",i,sep="")]] <- sciname(allparents(id=i, taxdir=NCBItaxonomy, nodes=nod), taxdir=NCBItaxonomy,names=nam)
+ try(ranks[[paste("rank",i,sep="")]] <- getrank(allparents(id=i, taxdir=NCBItaxonomy, nodes=nod), taxdir=NCBItaxonomy, nodes=nod))
+  try(tax[[paste("tax",i,sep="")]] <- sciname(allparents(id=i, taxdir=NCBItaxonomy, nodes=nod), taxdir=NCBItaxonomy,names=nam))
   }
 for(i in taxonomy$id){
   for(j in intersect(ranks[[paste("rank",i,sep="")]],names(taxonomy)[3:9])){
@@ -49,6 +49,9 @@ phylum_table <- aggregate(annotated_readtable[, -c(1:8)], by = list(taxon = anno
 
 write.table(species_table, paste(wd, "/", folder.name, "TaxonomicTables/", 
             folder.name, "blast_species_table.txt", sep = ""), quote = F, row.names = F, 
+            sep = "\t")
+write.table(annotated_readtable, paste(wd, "/", folder.name, "TaxonomicTables/", 
+            folder.name, "blast_annotated_read_table.txt", sep = ""), quote = F, row.names = F, 
             sep = "\t")
 write.table(genus_table, paste(wd, "/", folder.name, "TaxonomicTables/", 
             folder.name, "blast_genus_table.txt", sep = ""), quote = F, row.names = F, 

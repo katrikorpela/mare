@@ -22,8 +22,14 @@ CovariateTest <- function(species.table=NULL, genus.table=NULL, family.table=NUL
   taxa <- data.frame(cbind(species,genus,family,order,class,phylum))
   taxa <- taxa[,names(colSums(taxa)[!is.na(colSums(taxa))])]
   
-  colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))])
-  colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))] <-  gsub(pattern="_Incertae_Sedis_",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))])
+   
+    colnames(genus)[grepl(pattern="incertae_sedis",x=colnames(genus))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(genus)[grepl(pattern="incertae_sedis",x=colnames(genus))])
+    colnames(genus)[grepl(pattern="Incertae_Sedis_",x=colnames(genus))] <-  gsub(pattern="_Incertae_Sedis_",replacement = "incertaesedis",x= colnames(genus)[grepl(pattern="Incertae_Sedis_",x=colnames(genus))])
+    colnames(genus)[grepl(pattern="Erysipelotrichi_",x=colnames(genus))] <-  gsub(pattern="Erysipelotrichi_",replacement = "Erysipelotrichia_",x= colnames(genus)[grepl(pattern="Erysipelotrichi_",x=colnames(genus))])
+
+    colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))])
+    colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))] <-  gsub(pattern="_Incertae_Sedis_",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))])
+    colnames(taxa)[grepl(pattern="Erysipelotrichi_",x=colnames(taxa))] <-  gsub(pattern="Erysipelotrichi_",replacement = "Erysipelotrichia_",x= colnames(taxa)[grepl(pattern="Erysipelotrichi_",x=colnames(taxa))])
 
   taxa <- taxa[, colSums(taxa/ metadata$ReadCount > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
    
@@ -62,8 +68,11 @@ CovariateTest <- function(species.table=NULL, genus.table=NULL, family.table=NUL
      model <- list()
     
     if (length(group) != 0) {
-        dataset$group <- as.factor(dataset[, group])
-        dataset$group <- dataset$group[drop = T]
+      dataset$group <- as.character(dataset[, group])
+      dataset <- dataset[!is.na(dataset$group)&dataset$group!="",]
+      for(i in unique(dataset$group)) if(table(dataset$group)[i] < 10) dataset$group[dataset$group==i] <- "othergroups"
+      dataset$group <- as.factor(dataset$group)
+      dataset$group <- dataset$group[drop = T]
         covariate_test <- data.frame(array(dim = c(length(names(taxa)), (1 + 2*length(levels(dataset$group))))))
         names(covariate_test) <- c("taxon", c(paste(covariate, levels(dataset$group),"estimate", sep = "_"),
                                               paste(covariate, levels(dataset$group),"p", sep = "_")))
@@ -79,176 +88,476 @@ CovariateTest <- function(species.table=NULL, genus.table=NULL, family.table=NUL
                       confounders[2], confounders[3], confounders[4], confounders[5], 
                       "ID", covariate, "ReadCount") != ""]])
            modeldata[,group]<-modeldata[,group][drop=T]
-             if (max(table(dataset[, group], dataset[, subject.ID])) > 1) {
-            for (j in levels(dataset$group)) { 
+             
+           if (max(table(dataset[, group], dataset[, subject.ID])) > 1) {
+        
+           for (j in levels(dataset$group)) { 
               
-               for (i in names(taxa)) { 
-                     model[[paste(i,j)]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste(i, "~", 
+               for (i in names(colSums(modeldata[modeldata$group==j,names(taxa)]>0)[colSums(modeldata[modeldata$group==j,names(taxa)]>0)>5])) { 
+               model[[paste(i,j)]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste(i, "~", 
                     confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
                       "+", covariate, "+", "offset(log(ReadCount))")), random = ~1 | ID, family = "nbinom", 
                     data = modeldata[modeldata$group==j,], admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)), 
                       error = function(e) NULL)
+               
+                if(length(model[[paste(i,j)]])==0){
+            if(abs(mean(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])-median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j]))/median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])<0.1){
+           model[[paste(i,j)]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),random = ~1 | ID,  data = modeldata[modeldata$group==j,]),
+                error = function(e) NULL)
+           
+            } else{
+              model[[paste(i,j)]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),random = ~1 | ID,  data = modeldata[modeldata$group==j,]),
+                error = function(e) NULL)
+           }}  
+               
               if(length(model[[paste(i,j)]])>0){
-              if (model[[paste(i,j)]]$alpha<5){
           tmp <- data.frame(res = resid(model[[paste(i,j)]],type="pearson"), pred = predict(model[[paste(i,j)]], type="response"))  
           tmp$covariate <- modeldata[modeldata$group==j,covariate]
           tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
+              if(sum(abs(tmp$res))!=0){
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            if(length(summary(model[[paste(i,j)]])$tTable)==0){
             covariate_test[i, c(paste(covariate, j,"estimate", sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$coef[covariate, c(1,4)]
-                }}}}}}
-                  }
-               for(i in rownames(covariate_test)[is.na(covariate_test[,paste(covariate, j,"estimate", sep = "_")])]){
-                  model[[paste(i,j)]] <- tryCatch(nlme::lme(as.formula(paste(i, "~", 
+           } else {
+             covariate_test[i, c(paste(covariate, j,"estimate", sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$tTable[covariate, c(1,5)] 
+           }
+            } else {
+           if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]<0.01){
+              if(abs(mean(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])-median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j]))/median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])<0.1){
+          model[[paste(i,j)]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
                     confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
-                      "+", covariate, "+", "offset(log(ReadCount))")), random = ~1|ID,  data = modeldata[modeldata$group==j,]), 
-                      error = function(e) NULL)
-              if(length(model[[paste(i,j)]])>0){
-         tmp <- data.frame(res = resid(model[[paste(i,j)]],type="pearson"), pred = predict(model[[paste(i,j)]], type="response"))  
-          tmp$covariate <- modeldata[modeldata$group==j,covariate]
-          tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-                   covariate_test[i, c(paste(covariate, j,"estimate", sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$tTable[covariate, c(1,5)]
-          }}}}}
-                  }}
-             
-        if(nonzero){         
-        for (j in levels(dataset$group)) { 
-          for(i in names(colSums(modeldata[,colnames(taxa)]>0)[colSums(modeldata[,colnames(taxa)]>0)>3])){     
-                 
-            model[[paste(i,j,"nonzero")]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste(i, "~",
-                       confounders[1], "+", confounders[2], "+", 
-                      confounders[3], "+", confounders[4], "+", confounders[5], 
-                      "+", covariate, "+", "offset(log(ReadCount))")), random = ~1 | 
-                      ID, family = "nbinom", data = modeldata[modeldata$group==j&modeldata[,i]>0,],
-                      admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)), 
-                      error = function(e) NULL)
-              if(length(model[[paste(i,j,"nonzero")]])>0){
-              if (model[[paste(i,j,"nonzero")]]$alpha<5){
-               tmp <- data.frame(res = resid(model[[paste(i,j)]],type="pearson"), pred = predict(model[[paste(i,j)]], type="response"))  
-          tmp$covariate <- modeldata[modeldata$group==j,covariate]
-          tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){       
-            covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$coef[covariate, c(1,4)]
-          }}}}}}
-                  }
-        
-          for(i in intersect(rownames(covariate_test)[is.na(covariate_test[,paste(covariate, j,"nonzero_estimate", sep = "_")])], 
-            names(colSums(modeldata[,colnames(taxa)]>0)[colSums(modeldata[,colnames(taxa)]>0)>3]))){     
-                    model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste(i, "~",
-                       confounders[1], "+", confounders[2], "+", 
-                      confounders[3], "+", confounders[4], "+", confounders[5], 
-                      "+", covariate, "+", "offset(log(ReadCount))")), random = ~1 | ID,  
-                      data = modeldata[modeldata$group==j&modeldata[,i]>0,]), 
-                      error = function(e) NULL)
-              if(length(model[[paste(i,j,"nonzero")]])>0){
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(), 
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+              } else{
+           model[[paste(i,j)]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(), 
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL)      
+              }
+           } else {
+             if(abs(mean(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])-median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j]))/median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])<0.1){
+             model[[paste(i,j)]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             } else {
+               model[[paste(i,j)]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             }
+           }
+           if(length(model[[paste(i,j)]])>0){
           tmp <- data.frame(res = resid(model[[paste(i,j)]],type="pearson"), pred = predict(model[[paste(i,j)]], type="response"))  
           tmp$covariate <- modeldata[modeldata$group==j,covariate]
           tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-         covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$tTable[covariate, c(1,5)]
-               }}}}}
-        }}
-        }
-         }
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, j,"estimate", sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$tTable[covariate, c(1,5)]
+         } else {
+           if(abs(mean(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])-median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j]))/median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])<0.1){
+           model[[paste(i,j)]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID,
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
            } else {
+              model[[paste(i,j)]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID,
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           }
+             if(length(model[[paste(i,j)]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,j)]],type="pearson"), pred = predict(model[[paste(i,j)]], type="response"))  
+          tmp$covariate <- modeldata[modeldata$group==j,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, j,"estimate", sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$tTable[covariate, c(1,5)]
+           
+         }}
+         }
+           } 
+          
+         }
+              }}
+               
+if(length(model[[paste(i,j)]])>0){
+     covariate_test[i, paste("model",j,sep="_")] <- strsplit(as.character(summary(model[[paste(i,j)]])$call),split="(",fixed=T)[[1]][1] 
+     
+     if(covariate_test[i, paste("model",j,sep="_")]== "lme.formula"){
+     if(abs(mean(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])-median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j]))/median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])>0.0999){
+    covariate_test[i, paste("model",j,sep="_")] <- paste("log",covariate_test[i, paste("model",j,sep="_")])
+     } 
+     }
+}
+               
+               
+    if(nonzero){
+               model[[paste(i,j,"nonzero")]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste(i, "~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate, "+", "offset(log(ReadCount))")), random = ~1 | ID, family = "nbinom", 
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)), 
+                      error = function(e) NULL)
+               
+                if(length(model[[paste(i,j,"nonzero")]])==0){
+            if(abs(mean(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])-median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0]))/median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])<0.1){
+           model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),random = ~1 | ID,  data = modeldata[modeldata$group==j&modeldata[,i]>0,]),
+                error = function(e) NULL)
+           
+            } else{
+              model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),random = ~1 | ID,  data = modeldata[modeldata$group==j&modeldata[,i]>0,]),
+                error = function(e) NULL)
+           }}  
+               
+              if(length(model[[paste(i,j,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,j,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,j,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata$group==j&modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+              if(sum(abs(tmp$res))!=0){
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            if(length(summary(model[[paste(i,j,"nonzero")]])$tTable)==0){
+            covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$coef[covariate, c(1,4)]
+           } else {
+             covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$tTable[covariate, c(1,5)] 
+           }
+            } else {
+           if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]<0.01){
+              if(abs(mean(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])-median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0]))/median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])<0.1){
+          model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(), 
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+              } else{
+           model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(), 
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL)      
+              }
+           } else {
+             if(abs(mean(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])-median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0]))/median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])<0.1){
+             model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             } else {
+               model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             }
+           }
+           if(length(model[[paste(i,j,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,j,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,j,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata$group==j&modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$tTable[covariate, c(1,5)]
+         } else {
+           if(abs(mean(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])-median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0]))/median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])<0.1){
+           model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID,
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           } else {
+              model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID,
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           }
+             if(length(model[[paste(i,j,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,j,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,j,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata$group==j&modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$tTable[covariate, c(1,5)]
+           
+         }}
+         }
+           } 
+          
+         }
+              }}
+               
+if(length(model[[paste(i,j,"nonzero")]])>0){
+     covariate_test[i, paste("nonzero_model",j,sep="_")] <- strsplit(as.character(summary(model[[paste(i,j,"nonzero")]])$call),split="(",fixed=T)[[1]][1] 
+     
+     if(covariate_test[i, paste("nonzero_model",j,sep="_")]== "lme.formula"){
+     if(abs(mean(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])-median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0]))/median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])>0.0999){
+    covariate_test[i, paste("nonzero_model",j,sep="_")] <- paste("log",covariate_test[i, paste("nonzero_model",j,sep="_")])
+     } 
+     }
+     }
+     }
+               
+               
+               }
+           }
+           }
+           
+           
+           
+        } else {
     modeldata <- na.omit(dataset[ , c("group",group, names(taxa), confounders[1], confounders[2], confounders[3], confounders[4], 
                     confounders[5],  covariate, "ReadCount")[c("group",group, names(taxa), confounders[1], 
                     confounders[2], confounders[3], confounders[4], confounders[5], 
                     covariate, "ReadCount") != ""]])
     modeldata[,group]<-modeldata[,group][drop=T]
+    
       for (j in levels(dataset$group)) {      
         
-        for (i in names(taxa)){
-                  model[[paste(i,j)]] <- tryCatch(MASS::glm.nb(as.formula(paste(i, "~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                    "+", confounders[4], "+", confounders[5], "+", covariate, 
-                    "+", "offset(log(ReadCount))")), data = modeldata[modeldata$group==j,], 
-                    control = glm.control(maxit = 500)), 
-                    error = function(e) NULL)
-          if(length(model[[paste(i,j)]])>0){
-          if ((model[[paste(i,j)]]$deviance/model[[paste(i,j)]]$df.residual)<5){
-          tmp <- data.frame(res = resid(model[[paste(i,j)]],type="deviance"), pred = predict(model[[paste(i,j)]], type="response"))  
-          tmp$covariate <- modeldata[modeldata$group==j,covariate]
-          tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-                  covariate_test[i, c(paste(covariate, j,"estimate", sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$coef[covariate, c(1,4)]
-          }}}}}}}
-         
-        for(i in rownames(covariate_test)[is.na(covariate_test[,paste(covariate,j,"p",sep="_")])]){
-                  model[[paste(i,j)]] <- tryCatch(lm(as.formula(paste("log((",i, "+1)/ReadCount)~", confounders[1], "+", 
-                                                                      confounders[2], "+", confounders[3], 
-                    "+", confounders[4], "+", confounders[5], "+", covariate)), data = modeldata[modeldata$group==j,]),
-                    error = function(e) NULL)
-          if(length(model[[paste(i,j)]])>0){
-          tmp <- data.frame(res = resid(model[[paste(i,j)]],type="deviance"), pred = predict(model[[paste(i,j)]], type="response"))  
-          tmp$covariate <- modeldata[modeldata$group==j,covariate]
-          tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-                  covariate_test[i, c(paste(covariate, j,"estimate", sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$coef[covariate, c(1,4)]
-          }}}}}}
-        
-        }
+        for (i in names(colSums(modeldata[modeldata$group==j,names(taxa)]>0)[colSums(modeldata[modeldata$group==j,names(taxa)]>0)>5])){
           
-        
-          if(nonzero){       
-            for (j in levels(dataset$group)) {  
-              
-          for(i in names(colSums(modeldata[,colnames(taxa)]>0)[colSums(modeldata[,colnames(taxa)]>0)>3])){     
-          model[[paste(i,j,"nonzero")]] <- tryCatch(MASS::glm.nb(as.formula(paste(i, "~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                    "+", confounders[4], "+", confounders[5], "+", covariate, 
-                    "+", "offset(log(ReadCount))")),  data = modeldata[modeldata$group==j&modeldata[,i]>0,],
-                    control = glm.control(maxit = 500)), 
-                    error = function(e) NULL)
-                   if(length(model[[paste(i,j,"nonzero")]])>0){
-          if ((model[[paste(i,j,"nonzero")]]$deviance/model[[paste(i,j,"nonzero")]]$df.residual)<5){
-          tmp <- data.frame(res = resid(model[[paste(i,j,"nonzero")]],type="deviance"), pred = predict(model[[paste(i,j,"nonzero")]], type="response"))  
-          tmp$covariate <- modeldata[modeldata$group==j&modeldata[,i]>0,covariate]
+               model[[paste(i,j)]] <- tryCatch(MASS::glm.nb(as.formula(paste(i, "~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate, "+", "offset(log(ReadCount))")),
+                    data = modeldata[modeldata$group==j,]), 
+                      error = function(e) NULL)
+               
+                if(length(model[[paste(i,j)]])==0){
+            if(abs(mean(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])-median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j]))/median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])<0.1){
+           model[[paste(i,j)]] <- tryCatch(lm(as.formula(paste("((", i, ")/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),  data = modeldata[modeldata$group==j,]),
+                error = function(e) NULL)
+           
+            } else {
+              model[[paste(i,j)]] <- tryCatch(lm(as.formula(paste("log((", i, "+1)/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),  data = modeldata[modeldata$group==j,]),
+                error = function(e) NULL)
+           }}  
+               
+              if(length(model[[paste(i,j)]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,j)]],type="pearson"), pred = predict(model[[paste(i,j)]], type="response"))  
+          tmp$covariate <- modeldata[modeldata$group==j,covariate]
           tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-                covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$coef[covariate, c(1,4)]
-          }}}}}}}
-      
-    for(i in intersect(rownames(covariate_test)[is.na(covariate_test[,paste(covariate,j,"nonzero_p",sep="_")])], 
-                       names(colSums(modeldata[,colnames(taxa)]>0)[colSums(modeldata[,colnames(taxa)]>0)>3]))){     
-          model[[paste(i,j,"nonzero")]] <- tryCatch(lm(as.formula(paste("log((",i, "+1)/ReadCount)~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                    "+", confounders[4], "+", confounders[5], "+", covariate)),  
-                    data = modeldata[modeldata$group==j&modeldata[,i]>0,]), 
-                    error = function(e) NULL)
-                   if(length(model[[paste(i,j,"nonzero")]])>0){
-          tmp <- data.frame(res = resid(model[[paste(i,j,"nonzero")]],type="deviance"), pred = predict(model[[paste(i,j,"nonzero")]], type="response"))  
-          tmp$covariate <- modeldata[modeldata$group==j&modeldata[,i]>0,covariate]
-          tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-                covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$coef[covariate, c(1,4)]
-          }}}}}}   
+              if(sum(abs(tmp$res))!=0){
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, j,"estimate", sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$coef[covariate, c(1,4)]
+            } else {
+           if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]<0.01){
+              if(abs(mean(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])-median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j]))/median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])<0.1){
+          model[[paste(i,j)]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(), 
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+              } else {
+           model[[paste(i,j)]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(), 
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL)      
               }
-          }
+           } else {
+             if(abs(mean(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])-median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j]))/median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])<0.1){
+             model[[paste(i,j)]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             } else {
+               model[[paste(i,j)]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             }
+           }
+           if(length(model[[paste(i,j)]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,j)]],type="pearson"), pred = predict(model[[paste(i,j)]], type="response"))  
+          tmp$covariate <- modeldata[modeldata$group==j,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, j,"estimate", sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$tTable[covariate, c(1,4)]
+         } else {
+           if(abs(mean(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])-median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j]))/median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])<0.1){
+           model[[paste(i,j)]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)),
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           } else {
+              model[[paste(i,j)]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)),
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata$group==j,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           }
+             if(length(model[[paste(i,j)]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,j)]],type="pearson"), pred = predict(model[[paste(i,j)]], type="response"))  
+          tmp$covariate <- modeldata[modeldata$group==j,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, j,"estimate", sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$tTable[covariate, c(1,4)]
+           
+         }}
+         }
+           } 
+          
+         }
+              }}
+               
+if(length(model[[paste(i,j)]])>0){
+     covariate_test[i, paste("model",j,sep="_")] <- strsplit(as.character(summary(model[[paste(i,j)]])$call),split="(",fixed=T)[[1]][1] 
+     
+     if(covariate_test[i, paste("model",j,sep="_")]== "lm" | covariate_test[i, paste("model",j,sep="_")]== "nlme::gls" ){
+     if(abs(mean(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])-median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j]))/median(modeldata[modeldata$group==j,i]/modeldata$ReadCount[modeldata$group==j])>0.0999){
+    covariate_test[i, paste("model",j,sep="_")] <- paste("log",covariate_test[i, paste("model",j,sep="_")])
+     } 
+     }
+}
+               
+               
+    if(nonzero){
+               model[[paste(i,j,"nonzero")]] <- tryCatch(MASS::glm.nb(as.formula(paste(i, "~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate, "+", "offset(log(ReadCount))")), 
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,]), 
+                      error = function(e) NULL)
+               
+                if(length(model[[paste(i,j,"nonzero")]])==0){
+            if(abs(mean(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])-median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0]))/median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])<0.1){
+           model[[paste(i,j,"nonzero")]] <- tryCatch(lm(as.formula(paste("((", i, ")/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)), data = modeldata[modeldata$group==j&modeldata[,i]>0,]),
+                error = function(e) NULL)
+           
+            } else{
+              model[[paste(i,j,"nonzero")]] <- tryCatch(lm(as.formula(paste("log((", i, "+1)/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)), data = modeldata[modeldata$group==j&modeldata[,i]>0,]),
+                error = function(e) NULL)
+           }}  
+               
+              if(length(model[[paste(i,j,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,j,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,j,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata$group==j&modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+              if(sum(abs(tmp$res))!=0){
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+
+            covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$coef[covariate, c(1,4)]
+           
+            } else {
+           if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]<0.01){
+              if(abs(mean(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])-median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0]))/median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])<0.1){
+          model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(), 
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+              } else{
+           model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(), 
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL)      
+              }
+           } else {
+             if(abs(mean(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])-median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0]))/median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])<0.1){
+             model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             } else {
+               model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             }
+           }
+           if(length(model[[paste(i,j,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,j,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,j,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata$group==j&modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$tTable[covariate, c(1,4)]
+         } else {
+           if(abs(mean(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])-median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0]))/median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])<0.1){
+           model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)),
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           } else {
+              model[[paste(i,j,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)),
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata$group==j&modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           }
+             if(length(model[[paste(i,j,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,j,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,j,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata$group==j&modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, j,"nonzero_estimate", sep = "_"),paste(covariate, j,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,j,"nonzero")]])$tTable[covariate, c(1,4)]
+           
+         }}
+         }
+           } 
+          
+         }
+              }}
+               
+if(length(model[[paste(i,j,"nonzero")]])>0){
+     covariate_test[i, paste("nonzero_model",j,sep="_")] <- strsplit(as.character(summary(model[[paste(i,j,"nonzero")]])$call),split="(",fixed=T)[[1]][1] 
+     
+     if(covariate_test[i, paste("nonzero_model",j,sep="_")]== "lm" | covariate_test[i, paste("nonzero_model",j,sep="_")]== "nlme::gls"){
+     if(abs(mean(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])-median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0]))/median(modeldata[modeldata$group==j&modeldata[,i]>0,i]/modeldata$ReadCount[modeldata$group==j&modeldata[,i]>0])>0.0999){
+    covariate_test[i, paste("nonzero_model",j,sep="_")] <- paste("log",covariate_test[i, paste("nonzero_model",j,sep="_")])
+     } 
+     }
+     }
+     }
+
+               }
+           }      
+
  }
           
-  for (i in names(covariate_test)[-1]) covariate_test[, i] <- as.numeric(covariate_test[, i])
+#  for (i in names(covariate_test)[-1]) covariate_test[, i] <- as.numeric(covariate_test[, i])
   
       sig <- na.omit(names(apply(covariate_test[,grepl(pattern="_p$",x=colnames(covariate_test))],MARGIN = 1,FUN = min,na.rm=T)[apply(covariate_test[,grepl(pattern="_p$",x=colnames(covariate_test))],MARGIN = 1,FUN = min,na.rm=T)<p.cutoff]))
       if(nonzero) {
@@ -292,7 +601,7 @@ CovariateTest <- function(species.table=NULL, genus.table=NULL, family.table=NUL
             }
  
                 
-  df = na.omit(reshape2::melt(dataset2[,c(covariate,group,sig)], id=c(covariate,group)))
+  df = na.omit(reshape2::melt(dataset2[,c(covariate,"group",sig)], id=c(covariate,"group")))
   names(df) <- c("x","gr","variable","value") 
   df$variable <- sapply(df$variable, function(x) gsub(pattern = "_NA",replacement = "", x=x))
   df$variable <- sapply(df$variable, function(x) gsub(pattern = "_incertae_sedis",replacement = "", x=x))
@@ -323,11 +632,11 @@ CovariateTest <- function(species.table=NULL, genus.table=NULL, family.table=NUL
       ggplot2::ylab('Deviance from expected') 
     }
   if(pdf){
-pdf(paste(covariate,"_",group, "_", select.by,select, "_", "Covariateplot.pdf", sep = ""));
+pdf(width=2*sqrt(length(sig)),paste(covariate,"_",group, "_", select.by,select, "_", "Covariateplot.pdf", sep = ""));
 plot(p)
 dev.off() 
 }       
- quartz() 
+ quartz(width=2*sqrt(length(sig))) 
   plot(p)
 
 #------------
@@ -355,7 +664,7 @@ if(length(species.table)!=0){
 
 sp <- intersect(sp,colnames(taxa))  
  
-for(h in unique(modeldata[,group])){ 
+for(h in unique(modeldata$group)){ 
 covariate_test_group <-  cbind(covariate_test[,colnames(covariate_test)[grepl(pattern=paste("_",h,"_",sep=""),x=colnames(covariate_test))]])  
 if(nonzero){
 a <- covariate_test_group[!is.na(covariate_test[,paste(covariate,h,"p",sep="_")])&!is.na(covariate_test[,paste(covariate,h,"nonzero_p",sep="_")])&covariate_test[,paste(covariate,h,"p",sep="_")]==covariate_test[,paste(covariate,h,"nonzero_p",sep="_")]|!is.na(covariate_test[,paste(covariate,h,"p",sep="_")])&!is.na(covariate_test[,paste(covariate,h,"nonzero_p",sep="_")])&covariate_test[,paste(covariate,h,"p",sep="_")]<covariate_test[,paste(covariate,h,"nonzero_p",sep="_")]|!is.na(covariate_test[,paste(covariate,h,"p",sep="_")])&is.na(covariate_test[,paste(covariate,h,"nonzero_p",sep="_")]),c(paste(covariate,h,"estimate",sep="_"),paste(covariate,h,"p",sep="_"))]
@@ -380,7 +689,8 @@ for(i in rownames(covariate_test_summary2)){
 abu <- list()
 for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
 
-newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+#newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+newseqs2 <- paste("XX Bacteria_", names(seqs1)," ",seqs1," ", abu, sep="")
 
 tmp2 <-  metacoder::extract_taxonomy(input=newseqs2,regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
                          key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_")
@@ -407,9 +717,9 @@ for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)])){
 heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100, 
                    node_label = ifelse(name == "NA", NA, name),
                    node_color = as.numeric(taxon_info_1),
-                   node_color_range=c("royalblue","cornflowerblue","gray90","hotpink","red"),
+                   node_color_range=c("#377EB8","gray95","red"),
                    node_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
-                   edge_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   edge_color_interval =c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
                    node_color_axis_label = "Effect size",
                    node_size_axis_label = "Average relative abundance (%)",
           node_label_size_range=c(0.01,0.014),
@@ -427,10 +737,8 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
 
 }
 }
-#------------
 
         }
-      
     } else {
               
         if (length(subject.ID) != 0) {
@@ -441,154 +749,464 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
                     confounders[3], confounders[4], confounders[5],  "ID", 
                     covariate, "ReadCount") != ""]])
           
-            for (i in names(taxa)){
-               model[[i]] <-  tryCatch(glmmADMB::glmmadmb(as.formula(paste(i, "~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                  "+", confounders[4], "+", confounders[5], "+", covariate, 
-                  "+", "offset(log(ReadCount))")), random = ~1 | ID, family = "nbinom", 
-                  data = modeldata, admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)), 
-                  error = function(e) NULL)
-          if(length(model[[i]])>0){
-          if ((model[[i]]$alpha)<5){
-          tmp <- data.frame(res = resid(model[[i]],type="pearson"), pred = predict(model[[i]], type="response"))  
-          tmp$covariate <- modeldata[,covariate]
-          tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-      covariate_test[i, c(paste(covariate, "estimate", sep = "_"),paste(covariate, "p", sep = "_"))] <- summary(model[[i]])$coef[covariate, c(1,4)]
-          }}}}}}}
-            
-      for(i in rownames(covariate_test)[is.na(covariate_test[,paste(covariate, "estimate", sep = "_")])]){
-           model[[i]] <-  tryCatch(nlme::lme(as.formula(paste("log((",i, "+1)/ReadCount)~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                  "+", confounders[4], "+", confounders[5], "+", covariate)), random = ~1 | ID,
-                  data = modeldata), 
-                  error = function(e) NULL)
-          if(length(model[[i]])>0){
-          tmp <- data.frame(res = resid(model[[i]],type="pearson"), pred = predict(model[[i]], type="response"))  
-          tmp$covariate <- modeldata[,covariate]
-          tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-           covariate_test[i, c(paste(covariate, "estimate", sep = "_"),paste(covariate, "p", sep = "_"))] <- summary(model[[i]])$tTable[covariate, c(1,5)]
-          }}}}}}
-            
-        if(nonzero){     
-       for (i in names(colSums(modeldata[,colnames(taxa)]>0)[colSums(modeldata[,colnames(taxa)]>0)>3])){      
-               model[[paste(i,"nonzero")]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste( i, "~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                  "+", confounders[4], "+", confounders[5], "+", covariate, 
-                  "+", "offset(log(ReadCount))")), random = ~1 | ID, family = "nbinom", 
-                  data = modeldata[modeldata[,i]>0,], 
-                  admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)), 
-                  error = function(e) NULL)
-              if(length(model[[paste(i,"nonzero")]])>0){
-          if ((model[[paste(i,"nonzero")]]$alpha)<5){
-          tmp <- data.frame(res = resid(model[[paste(i,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,"nonzero")]], type="response"))  
-          tmp$covariate <- modeldata[modeldata[,i]>0,covariate]
-          tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-             covariate_test[i, c(paste(covariate, "nonzero_estimate", sep = "_"),paste(covariate, "nonzero_p", sep = "_"))] <-  summary(model[[paste(i,"nonzero")]])$coef[covariate, c(1,4)]
-          }}}}}}}
+            for (i in names(colSums(modeldata[,names(taxa)]>0)[colSums(modeldata[,names(taxa)]>0)>5])) { 
               
-          for(i in intersect(rownames(covariate_test)[is.na(covariate_test[,paste(covariate, "nonzero_estimate", sep = "_")])], 
-                             names(colSums(modeldata[,colnames(taxa)]>0)[colSums(modeldata[,colnames(taxa)]>0)>3]))){     
-               model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((",i, "+1)/ReadCount)~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                  "+", confounders[4], "+", confounders[5], "+", covariate)), random = ~1 | ID,  
-                  data = modeldata[modeldata[,i]>0,]), 
-                  error = function(e) NULL)
-              if(length(model[[paste(i,"nonzero")]])>0){
-          tmp <- data.frame(res = resid(model[[paste(i,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,"nonzero")]], type="response"))  
-          tmp$covariate <- modeldata[modeldata[,i]>0,covariate]
-          tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-             covariate_test[i, c(paste(covariate, "nonzero_estimate", sep = "_"),paste(covariate, "nonzero_p", sep = "_"))] <-  summary(model[[paste(i,"nonzero")]])$tTable[covariate, c(1,5)]
-          }}}}}}
-        }     
-        
-       
-        } else {
-          modeldata <- na.omit(dataset[, c(names(taxa), confounders[1], confounders[2], confounders[3], confounders[4], 
-                    confounders[5], covariate, "ReadCount")[c(names(taxa), confounders[1], 
-                    confounders[2], confounders[3], confounders[4], confounders[5], 
-                     covariate, "ReadCount") != ""]])
-         
-           for (i in names(taxa)){
-                model[[i]] <- tryCatch(MASS::glm.nb(as.formula(paste(i, "~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                  "+", confounders[4], "+", confounders[5], "+", covariate, 
-                  "+", "offset(log(ReadCount))")), data = modeldata, control = glm.control(maxit = 1000)), 
-                  error = function(e) NULL)
-               if(length(model[[i]])>0){
-               if ((model[[i]]$deviance/model[[i]]$df.residual)<5){
-              tmp <- data.frame(res = resid(model[[i]],type="deviance"), pred = predict(model[[i]], type="response"))  
-          tmp$covariate <- modeldata[,covariate]
-          tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-                 covariate_test[i, c(paste(covariate, "estimate", sep = "_"),paste(covariate, "p", sep = "_"))] <- summary(model[[i]] )$coef[covariate, c(1,4)]
-          }}}}}}}
-          
-          for(i in rownames(covariate_test)[is.na(covariate_test[,paste(covariate, "estimate", sep = "_")])]){
-           model[[i]] <-  tryCatch(lm(as.formula(paste("log((",i, "+1)/ReadCount)~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                  "+", confounders[4], "+", confounders[5], "+", covariate)),data = modeldata), 
-                  error = function(e) NULL)
-          if(length(model[[i]])>0){
+               model[[i]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste(i, "~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate, "+", "offset(log(ReadCount))")), random = ~1 | ID, family = "nbinom", 
+                    data = modeldata, admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)), 
+                      error = function(e) NULL)
+               
+                if(length(model[[i]])==0){
+            if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.1){
+           model[[i]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),random = ~1 | ID,  data = modeldata),
+                error = function(e) NULL)
+           
+            } else{
+              model[[i]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),random = ~1 | ID,  data = modeldata),
+                error = function(e) NULL)
+           }}  
+               
+              if(length(model[[i]])>0){
           tmp <- data.frame(res = resid(model[[i]],type="pearson"), pred = predict(model[[i]], type="response"))  
           tmp$covariate <- modeldata[,covariate]
           tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-           covariate_test[i, c(paste(covariate, "estimate", sep = "_"),paste(covariate, "p", sep = "_"))] <- summary(model[[i]])$coef[covariate, c(1,4)]
-          }}}}}}
-          
-        if(nonzero){ 
-          for (i in names(colSums(modeldata[,colnames(taxa)]>0)[colSums(modeldata[,colnames(taxa)]>0)>3])){    
-            model[[paste(i,"nonzero")]] <- tryCatch(MASS::glm.nb(as.formula(paste(i, "~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                  "+", confounders[4], "+", confounders[5], "+", covariate, 
-                  "+", "offset(log(ReadCount))")), data = modeldata[modeldata[,i]>0,], 
-                  control = glm.control(maxit = 1000)), 
-                  error = function(e) NULL)
-           if(length(model[[paste(i,"nonzero")]])>0){
-              if ((model[[paste(i,"nonzero")]]$deviance/model[[paste(i,"nonzero")]]$df.residual)<5){
-          tmp <- data.frame(res = resid(model[[paste(i,"nonzero")]],type="deviance"), pred = predict(model[[paste(i,"nonzero")]], type="response"))  
-          tmp$covariate <- modeldata[modeldata[,i]>0,covariate]
+              if(sum(abs(tmp$res))!=0){
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            if(length(summary(model[[i]])$tTable)==0){
+            covariate_test[i, c(paste(covariate, "estimate", sep = "_"),paste(covariate,"p", sep = "_"))] <- summary(model[[i]])$coef[covariate, c(1,4)]
+           } else {
+             covariate_test[i, c(paste(covariate,"estimate", sep = "_"),paste(covariate,"p", sep = "_"))] <- summary(model[[i]])$tTable[covariate, c(1,5)] 
+           }
+            } else {
+           if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]<0.01){
+              if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.1){
+          model[[i]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(), 
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+              } else{
+           model[[i]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(), 
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL)      
+              }
+           } else {
+             if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.1){
+             model[[i]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             } else {
+               model[[i]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             }
+           }
+           if(length(model[[i]])>0){
+          tmp <- data.frame(res = resid(model[[i]],type="pearson"), pred = predict(model[[i]], type="response"))  
+          tmp$covariate <- modeldata[,covariate]
           tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-           covariate_test[i, c(paste(covariate, "nonzero_estimate", sep = "_"),paste(covariate, "nonzero_p", sep = "_"))] <- summary(model[[paste(i,"nonzero")]])$coef[covariate, c(1,4)]
-          }}}}}}}
-          for(i in intersect(rownames(covariate_test)[is.na(covariate_test[,paste(covariate, "nonzero_estimate", sep = "_")])], 
-                            names(colSums(modeldata[,colnames(taxa)]>0)[colSums(modeldata[,colnames(taxa)]>0)>3]))){     
-               model[[paste(i,"nonzero")]] <- tryCatch(lm(as.formula(paste("log((",i, "+1)/ReadCount)~", confounders[1], "+", confounders[2], "+", confounders[3], 
-                  "+", confounders[4], "+", confounders[5], "+", covariate)),  
-                  data = modeldata[modeldata[,i]>0,]), 
-                  error = function(e) NULL)
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate,"estimate", sep = "_"),paste(covariate,"p", sep = "_"))] <- summary(model[[i]])$tTable[covariate, c(1,5)]
+         } else {
+           if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.1){
+           model[[i]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID,
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           } else {
+              model[[i]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID,
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           }
+             if(length(model[[i]])>0){
+          tmp <- data.frame(res = resid(model[[i]],type="pearson"), pred = predict(model[[i]], type="response"))  
+          tmp$covariate <- modeldata[,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate,"estimate", sep = "_"),paste(covariate,"p", sep = "_"))] <- summary(model[[i]])$tTable[covariate, c(1,5)]
+           
+         }}
+         }
+           } 
+          
+         }
+              }}
+               
+if(length(model[[i]])>0){
+     covariate_test[i, paste("model",sep="_")] <- strsplit(as.character(summary(model[[i]])$call),split="(",fixed=T)[[1]][1] 
+     
+     if(covariate_test[i, paste("model",sep="_")]== "lme.formula"){
+     if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)>0.0999){
+    covariate_test[i, paste("model",sep="_")] <- paste("log",covariate_test[i, paste("model",sep="_")])
+     } 
+     }
+}
+               
+               
+    if(nonzero){
+               model[[paste(i,"nonzero")]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste(i, "~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate, "+", "offset(log(ReadCount))")), random = ~1 | ID, family = "nbinom", 
+                    data = modeldata[modeldata[,i]>0,], admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)), 
+                      error = function(e) NULL)
+               
+                if(length(model[[paste(i,"nonzero")]])==0){
+            if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])<0.1){
+           model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),random = ~1 | ID,  data = modeldata[modeldata[,i]>0,]),
+                error = function(e) NULL)
+           
+            } else{
+              model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),random = ~1 | ID,  data = modeldata[modeldata[,i]>0,]),
+                error = function(e) NULL)
+           }}  
+               
               if(length(model[[paste(i,"nonzero")]])>0){
           tmp <- data.frame(res = resid(model[[paste(i,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,"nonzero")]], type="response"))  
           tmp$covariate <- modeldata[modeldata[,i]>0,covariate]
           tmp$resdev <- abs(tmp$res) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-             covariate_test[i, c(paste(covariate, "nonzero_estimate", sep = "_"),paste(covariate, "nonzero_p", sep = "_"))] <-  summary(model[[paste(i,"nonzero")]])$coef[covariate, c(1,4)]
-          }}}}}}
-        }    
+              if(sum(abs(tmp$res))!=0){
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            if(length(summary(model[[paste(i,"nonzero")]])$tTable)==0){
+            covariate_test[i, c(paste(covariate,"nonzero_estimate", sep = "_"),paste(covariate,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,"nonzero")]])$coef[covariate, c(1,4)]
+           } else {
+             covariate_test[i, c(paste(covariate,"nonzero_estimate", sep = "_"),paste(covariate,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,"nonzero")]])$tTable[covariate, c(1,5)] 
+           }
+            } else {
+           if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]<0.01){
+              if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])<0.1){
+          model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(), 
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+              } else{
+           model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(), 
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL)      
+              }
+           } else {
+             if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])<0.1){
+             model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             } else {
+               model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID, weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             }
+           }
+           if(length(model[[paste(i,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate,"nonzero_estimate", sep = "_"),paste(covariate,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,"nonzero")]])$tTable[covariate, c(1,5)]
+         } else {
+           if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])<0.1){
+           model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID,
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           } else {
+              model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), random = ~1 | ID,
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           }
+             if(length(model[[paste(i,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate,"nonzero_estimate", sep = "_"),paste(covariate,"nonzero_p", sep = "_"))] <- summary(model[[paste(i,"nonzero")]])$tTable[covariate, c(1,5)]
+           
+         }}
+         }
+           } 
+          
+         }
+              }}
+               
+if(length(model[[paste(i,"nonzero")]])>0){
+     covariate_test[i, paste("nonzero_model",sep="_")] <- strsplit(as.character(summary(model[[paste(i,"nonzero")]])$call),split="(",fixed=T)[[1]][1] 
+     
+     if(covariate_test[i, paste("nonzero_model",sep="_")]== "lme.formula"){
+     if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])>0.0999){
+    covariate_test[i, paste("nonzero_model",sep="_")] <- paste("log",covariate_test[i, paste("nonzero_model",sep="_")])
+     } 
+     }
+     }
+     }
+               
+               
+               }
+            
+        } else {
+       
+           modeldata <- na.omit(dataset[, c(names(taxa), confounders[1], confounders[2], confounders[3], 
+                      confounders[4], confounders[5], covariate, "ReadCount")[c(names(taxa),confounders[1], 
+                      confounders[2], confounders[3], confounders[4], confounders[5], 
+                       covariate, "ReadCount") != ""]])  
+          
+           for (i in names(colSums(modeldata[,names(taxa)]>0)[colSums(modeldata[,names(taxa)]>0)>5])){
+          
+               model[[i]] <- tryCatch(MASS::glm.nb(as.formula(paste(i, "~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate, "+", "offset(log(ReadCount))")),
+                    data = modeldata), 
+                      error = function(e) NULL)
+               
+                if(length(model[[i]])==0){
+            if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.1){
+           model[[i]] <- tryCatch(lm(as.formula(paste("((", i, ")/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),  data = modeldata),
+                error = function(e) NULL)
+           
+            } else {
+              model[[i]] <- tryCatch(lm(as.formula(paste("log((", i, "+1)/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)),  data = modeldata),
+                error = function(e) NULL)
+           }}  
+               
+              if(length(model[[i]])>0){
+          tmp <- data.frame(res = resid(model[[i]],type="pearson"), pred = predict(model[[i]], type="response"))  
+          tmp$covariate <- modeldata[,covariate]
+          tmp$resdev <- abs(tmp$res) 
+              if(sum(abs(tmp$res))!=0){
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate,"estimate", sep = "_"),paste(covariate,"p", sep = "_"))] <- summary(model[[i]])$coef[covariate, c(1,4)]
+            } else {
+           if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]<0.01){
+              if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.1){
+          model[[i]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(), 
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+              } else {
+           model[[i]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(), 
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL)      
+              }
+           } else {
+             if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.1){
+             model[[i]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             } else {
+               model[[i]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             }
+           }
+           if(length(model[[i]])>0){
+          tmp <- data.frame(res = resid(model[[i]],type="pearson"), pred = predict(model[[i]], type="response"))  
+          tmp$covariate <- modeldata[,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate,"estimate", sep = "_"),paste(covariate,"p", sep = "_"))] <- summary(model[[i]])$tTable[covariate, c(1,4)]
+         } else {
+           if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.1){
+           model[[i]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)),
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           } else {
+              model[[i]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)),
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata, control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           }
+             if(length(model[[i]])>0){
+          tmp <- data.frame(res = resid(model[[i]],type="pearson"), pred = predict(model[[i]], type="response"))  
+          tmp$covariate <- modeldata[,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate,"estimate", sep = "_"),paste(covariate,"p", sep = "_"))] <- summary(model[[i]])$tTable[covariate, c(1,4)]
+           
+         }}
+         }
+           } 
+          
+         }
+              }}
+               
+if(length(model[[i]])>0){
+     covariate_test[i, paste("model",sep="_")] <- strsplit(as.character(summary(model[[i]])$call),split="(",fixed=T)[[1]][1] 
+     
+     if(covariate_test[i, paste("model",sep="_")]== "lm" | covariate_test[i, paste("model",sep="_")]== "nlme::gls" ){
+     if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)>0.0999){
+    covariate_test[i, paste("model",sep="_")] <- paste("log",covariate_test[i, paste("model",sep="_")])
+     } 
+     }
+}
+               
+               
+    if(nonzero){
+               model[[paste(i,"nonzero")]] <- tryCatch(MASS::glm.nb(as.formula(paste(i, "~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate, "+", "offset(log(ReadCount))")), 
+                    data = modeldata[modeldata[,i]>0,]), 
+                      error = function(e) NULL)
+               
+                if(length(model[[paste(i,"nonzero")]])==0){
+            if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])<0.1){
+           model[[paste(i,"nonzero")]] <- tryCatch(lm(as.formula(paste("((", i, ")/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)), data = modeldata[modeldata[,i]>0,]),
+                error = function(e) NULL)
+           
+            } else {
+              model[[paste(i,"nonzero")]] <- tryCatch(lm(as.formula(paste("log((", i, "+1)/ReadCount)~", confounders[1], "+", 
+                                                             confounders[2], "+", confounders[3], 
+                "+", confounders[4], "+", confounders[5], "+ ",covariate)), data = modeldata[modeldata[,i]>0,]),
+                error = function(e) NULL)
+           }}  
+               
+              if(length(model[[paste(i,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+              if(sum(abs(tmp$res))!=0){
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+
+            covariate_test[i, c(paste(covariate, "nonzero_estimate", sep = "_"),paste(covariate, "nonzero_p", sep = "_"))] <- summary(model[[paste(i,"nonzero")]])$coef[covariate, c(1,4)]
+           
+            } else {
+           if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]<0.01){
+              if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])<0.1){
+          model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(), 
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+              } else{
+           model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(), 
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL)      
+              }
+           } else {
+             if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])<0.1){
+             model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             } else {
+               model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)), weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+             }
+           }
+           if(length(model[[paste(i,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, "nonzero_estimate", sep = "_"),paste(covariate, "nonzero_p", sep = "_"))] <- summary(model[[paste(i,"nonzero")]])$tTable[covariate, c(1,4)]
+         } else {
+           if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])<0.1){
+           model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("((", i, ")/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)),
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           } else {
+              model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, "+1)/ReadCount)~", 
+                    confounders[1], "+", confounders[2], "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                      "+", covariate)),
+                    weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),    
+                    data = modeldata[modeldata[,i]>0,], control = nlme::glsControl(maxIter=5000)), 
+                      error = function(e) NULL) 
+           }
+             if(length(model[[paste(i,"nonzero")]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,"nonzero")]],type="pearson"), pred = predict(model[[paste(i,"nonzero")]], type="response"))  
+          tmp$covariate <- modeldata[modeldata[,i]>0,covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 &
+         summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+            covariate_test[i, c(paste(covariate, "nonzero_estimate", sep = "_"),paste(covariate, "nonzero_p", sep = "_"))] <- summary(model[[paste(i,"nonzero")]])$tTable[covariate, c(1,4)]
+           
+         }}
+         }
+           } 
+          
+         }
+              }}
+               
+if(length(model[[paste(i,"nonzero")]])>0){
+     covariate_test[i, paste("nonzero_model",sep="_")] <- strsplit(as.character(summary(model[[paste(i,"nonzero")]])$call),split="(",fixed=T)[[1]][1] 
+     
+     if(covariate_test[i, paste("nonzero_model",sep="_")]== "lm" | covariate_test[i, paste("nonzero_model",sep="_")]== "nlme::gls"){
+     if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])>0.0999){
+    covariate_test[i, paste("nonzero_model",sep="_")] <- paste("log",covariate_test[i, paste("nonzero_model",sep="_")])
+     } 
+     }
+     }
+     }
+
+               }
+          
         }
-        for (i in names(covariate_test)[-1]) covariate_test[, i] <- as.numeric(covariate_test[,i])
+     #for (i in names(covariate_test)[-1]) covariate_test[, i] <- as.numeric(covariate_test[,i])
   
     sig <-  na.omit(rownames(covariate_test)[covariate_test[,grepl(pattern=paste(covariate,"p$",sep="_"),x=colnames(covariate_test))]<p.cutoff])
     if(nonzero){   sigNonzero <-  na.omit(rownames(covariate_test)[covariate_test[,grepl(pattern="nonzero_p$",x=colnames(covariate_test))]<p.cutoff]) 
@@ -657,27 +1275,14 @@ if (length(sig) > 0) {
    }
 
   if(pdf){
-pdf(paste(covariate,"_",group, "_", select.by,select, "_", "Covariateplot.pdf", sep = ""));
+pdf(width=3*sqrt(length(sig)),paste(covariate,"_",group, "_", select.by,select, "_", "Covariateplot.pdf", sep = ""));
 plot(p)
 dev.off() 
 }       
-quartz() 
+quartz(width=3*sqrt(length(sig))) 
   plot(p)
          
       
-if (pdf) {
-  pdf(paste(covariate,"_",group, "_", select.by,select, "_", "CovariateTestResult.pdf", sep = "")) 
-par(mar=c(4,20,2,2),cex.axis=0.5)
-barplot(covariate_test_summary[,2],horiz=T,names.arg = paste(rownames(covariate_test_summary),"p =",
-      round(covariate_test_summary[,3],digits=2)),las=2,col=as.factor(covariate_test_summary$class),
-      xaxt="n",xlab=paste("Estimated effect size of",covariate))   
-abline(v=0)
-axis(side=1) 
-dev.off()}
-
-
-#------------
-#------------
 library(metacoder)
     
 if(length(species.table)!=0){
@@ -724,7 +1329,9 @@ for(i in rownames(covariate_test_summary2)){
 abu <- list()
 for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
 
-newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+ if(length(intersect(colnames(phylum),sp))==length(sp)){newseqs2 <- paste("XX ", names(seqs1)," ",seqs1," ", abu, sep="")
+ } else newseqs2 <- paste("XX Bacteria_", names(seqs1)," ",seqs1," ", abu, sep="")
+
 
 tmp2 <-  metacoder::extract_taxonomy(input=newseqs2,regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
                          key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_")
@@ -750,7 +1357,7 @@ for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)])){
 heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100, 
                    node_label = ifelse(name == "NA", NA, name),
                    node_color = as.numeric(taxon_info_1),
-                   node_color_range=c("royalblue","cornflowerblue","gray90","hotpink","red"),
+                   node_color_range=c("#377EB8","gray95","red"),
                    node_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
                    edge_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
                    node_color_axis_label = "Effect size",
@@ -766,15 +1373,12 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
           title=paste("Associations with", covariate), title_size=0.03,
           output_file=paste(covariate, "_", select.by, select,"_HeatTree.pdf",sep=""))
 
-
-
-
-#------------
 }
 
 
 
-    }         
+        
+    }
       if(keep.result)        return(covariate_test)
     } 
     palette("default")

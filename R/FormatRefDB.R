@@ -50,6 +50,17 @@ FormatRefDB <- function(refDB, usearch.path, confidence.file, gut.specific = F,
                 split = ",")[[1]][7]))
             
             databaseselected <- database[databasetaxonomy$g == "g:Millisia" | 
+                                           databasetaxonomy$g == "g:Succinivibrio" |
+                                           databasetaxonomy$g == "g:Parabacteroides" |
+                                           databasetaxonomy$g == "g:Paraprevotella" |
+                                           databasetaxonomy$g == "g:Treponema" |
+                                           databasetaxonomy$g == "g:Fibrobacter" |
+                                           databasetaxonomy$g == "g:Methanobrevibacter" |
+                                           databasetaxonomy$g == "g:Butyricoccus" |
+                                           databasetaxonomy$g == "g:Phascolarctobacterium" |
+                                           databasetaxonomy$g == "g:Butyricimonas" |
+                                            databasetaxonomy$g == "g:Turicibacter" |
+                                           databasetaxonomy$g == "g:Odoribacter" |
                 databasetaxonomy$g == "g:Rhodococcus" | databasetaxonomy$g == 
                 "g:Actinomyces" | databasetaxonomy$g == "g:Bifidobacterium" | 
                 databasetaxonomy$g == "g:Corynebacterium" | databasetaxonomy$g == 
@@ -97,8 +108,11 @@ FormatRefDB <- function(refDB, usearch.path, confidence.file, gut.specific = F,
                 "g:Lachnospira" |
                 databasetaxonomy$g == "g:Roseburia" | databasetaxonomy$g == 
                 "g:Peptostreptococcus" | databasetaxonomy$g == "g:Sporacetigenium" | 
-                databasetaxonomy$f == "f:Erysipelotrichaceae" | databasetaxonomy$f == 
-                "f:Acidaminococcaceae" | databasetaxonomy$g == "g:Veillonella" | 
+                databasetaxonomy$f == "f:Erysipelotrichaceae" | 
+                   databasetaxonomy$f == "f:Lachnospiraceae" | 
+                  databasetaxonomy$f == "f:Ruminococcaceae" | 
+                  databasetaxonomy$f == "f:Veillonellaceae" | 
+                  databasetaxonomy$f == "f:Acidaminococcaceae" | databasetaxonomy$g == "g:Veillonella" | 
                 databasetaxonomy$g == "g:Allisonella" | databasetaxonomy$g == 
                 "g:Dialister" | databasetaxonomy$g == "g:Megamonas" | databasetaxonomy$g == 
                 "g:Megasphaera" | databasetaxonomy$g == "g:Mitsuokella" | databasetaxonomy$g == 
@@ -140,6 +154,17 @@ FormatRefDB <- function(refDB, usearch.path, confidence.file, gut.specific = F,
                 split = ",")[[1]][5]), g = sapply(names(database), function(x) strsplit(x, 
                 split = ",")[[1]][6]))
             databaseselected <- database[databasetaxonomy$g == "g:Gemmiger;" & 
+                                          !is.na(databasetaxonomy$g) |  databasetaxonomy$g == "g:Succinivibrio" &
+                                          !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Parabacteroides" &
+                                          !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Paraprevotella" &
+                                          !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Treponema" &
+                                          !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Fibrobacter" &
+                                          !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Methanobrevibacter" &
+                                          !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Butyricoccus" &
+                                          !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Phascolarctobacterium" &
+                                          !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Butyricimonas" &
+                                          !is.na(databasetaxonomy$g) |  databasetaxonomy$g == "g:Turicibacter" &
+                                         !is.na(databasetaxonomy$g) |  databasetaxonomy$g == "g:Odoribacter" &
                 !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Millisia;" & 
                 !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Rhodococcus;" & 
                 !is.na(databasetaxonomy$g) | databasetaxonomy$g == "g:Actinomyces;" & 

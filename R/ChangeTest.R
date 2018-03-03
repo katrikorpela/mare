@@ -23,8 +23,13 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
   taxa <- data.frame(cbind(species,genus,family,order,class,phylum))
   taxa <- taxa[,names(colSums(taxa)[!is.na(colSums(taxa))])]
   
+    colnames(genus)[grepl(pattern="incertae_sedis",x=colnames(genus))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(genus)[grepl(pattern="incertae_sedis",x=colnames(genus))])
+    colnames(genus)[grepl(pattern="Incertae_Sedis_",x=colnames(genus))] <-  gsub(pattern="_Incertae_Sedis_",replacement = "incertaesedis",x= colnames(genus)[grepl(pattern="Incertae_Sedis_",x=colnames(genus))])
+    colnames(genus)[grepl(pattern="Erysipelotrichi_",x=colnames(genus))] <-  gsub(pattern="Erysipelotrichi_",replacement = "Erysipelotrichia_",x= colnames(genus)[grepl(pattern="Erysipelotrichi_",x=colnames(genus))])
+
     colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))])
     colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))] <-  gsub(pattern="_Incertae_Sedis_",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))])
+    colnames(taxa)[grepl(pattern="Erysipelotrichi_",x=colnames(taxa))] <-  gsub(pattern="Erysipelotrichi_",replacement = "Erysipelotrichia_",x= colnames(taxa)[grepl(pattern="Erysipelotrichi_",x=colnames(taxa))])
   
  taxa <- taxa[, colSums(taxa/ metadata$ReadCount > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
        
@@ -93,11 +98,12 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
     
     model <- list()
     
-    
     if (length(group) != 0 & length(covariate) == 0) {
       
-    dataset[,group]<-as.character(dataset[,group])
-    for(i in unique(dataset[,group])) if(table(dataset[,group])[i] < 3) dataset[,group][dataset[,group]==i] <- "toofewcases"
+    dataset[,group] <- as.character(dataset[,group])
+    dataset <- dataset[!is.na(dataset[,group]),]
+    dataset[,group][dataset[,group]==""] <- "nogroup"
+    for(i in unique(dataset[,group])) if(table(dataset[,group])[i] < 2) dataset[,group][dataset[,group]==i] <- "toofewcases"
     dataset <- dataset[dataset[,group]!="toofewcases",]
     dataset[, group] <- dataset[, group][drop = T]
     if(length(compare.to)==0) compare.to = levels(as.factor(dataset[,group]))[1]
@@ -106,8 +112,12 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
     dataset[, group][dataset[, group] == compare.to & !is.na(dataset[, group])] <- "0"
     dataset[, group] <- as.factor(dataset[, group])
    
-    grouptime <- paste(dataset[dataset$time != 1 & dataset[, "G"] != compare.to & dataset[,group]!="other","time"], 
-                       dataset[dataset$time != 1 & dataset[, "G"] != compare.to & dataset[,group]!="other", "G"], sep = "/")
+    for(i in c(1:ncol(dataset))[-c(1:ncol(metadata),ncol(dataset))]){
+      if(min(dataset[,i]) == max(dataset[,i]))dataset[,i] <- NA
+     }
+    
+    grouptime <- paste(dataset[dataset$time != 1 & dataset[, group] != "0" & dataset[,group]!="other","time"], 
+                       dataset[dataset$time != 1 & dataset[, group] != "0" & dataset[,group]!="other", group], sep = "/")
         
   modeldata <- na.omit(dataset[dataset[,group]!="other", c("time","G", subject.ID,time,group, confounders[1], confounders[2], confounders[3], 
                   confounders[4], confounders[5], names(taxa), paste("baseline", names(taxa), sep = ""))[c("time", "G",subject.ID,group, time,
@@ -124,27 +134,69 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
         
         for (i in names(taxa)) {
             for (k in unique(modeldata$time)) {
-               tryCatch(model[[paste(i,k)]] <- lm(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
+              model[[paste(i,k)]] <-  tryCatch(lm(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
                   "+", confounders[3], "+", confounders[4], "+", confounders[5], "+ ", group, sep = "")), 
                   data = modeldata[modeldata$time == k&!is.na(modeldata[,i]),]), 
                   error = function(e) NULL)
-               if(length(model[[paste(i,k)]])>0){
-                  if(nrow(summary(model[[paste(i,k)]])$coef)>1){
-            if(summary(model[[paste(i,k)]])$coef[2,4]!="NaN"){
-          tmp <- data.frame(res = resid(model[[paste(i,k)]],type="deviance"), pred = predict(model[[paste(i,k)]]))  
+               if(length(model[[paste(i,k)]])>0 & nrow(summary(model[[paste(i,k)]])$coef)>1 & summary(model[[paste(i,k)]])$coef[2,4]!="NaN"){
+          tmp <- data.frame(res = resid(model[[paste(i,k)]],type="deviance"), fitted = predict(model[[paste(i,k)]]))  
           tmp$group <- modeldata[modeldata$time == k&!is.na(modeldata[,i]),group]
-          tmp$resdev <- abs(tmp$res-0) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ group, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ group, data=tmp))$Pr[1]>0.05){
+          tmp$resdev <- abs(tmp$res)
+          if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]>0.01 & summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]>0.01 &
+             anova(lm(res ~ group, data=tmp))$Pr[1]>0.01 & anova(lm(resdev ~ group, data=tmp))$Pr[1]>0.01){
           for(j in levels(modeldata[,group])[-1]){
-            group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <-  summary(model[[paste(i,k)]])$coef[paste(group,j,sep=""),c(1,4)]
+            group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <- summary(model[[paste(i,k)]])$coef[paste(group,j,sep=""),c(1,4)]
             }   
-          }}}}}}}
+          } else {
+            if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]<0.01){
+             model[[paste(i,k)]] <-   tryCatch(nlme::gls(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
+                  "+", confounders[3], "+", confounders[4], "+", confounders[5], "+ ", group, sep = "")), 
+                  data = modeldata[modeldata$time == k&!is.na(modeldata[,i]),], weights = nlme::varExp(), 
+                  control = nlme::glsControl(maxIter=5000)), 
+                  error = function(e) NULL)
+          } else if(anova(lm(res ~ group, data=tmp))$Pr[1]<0.01 | anova(lm(resdev ~ group, data=tmp))$Pr[1]<0.01){
+             model[[paste(i,k)]] <-  tryCatch(nlme::gls(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
+                  "+", confounders[3], "+", confounders[4], "+", confounders[5], "+ ", group, sep = "")), 
+                  data = modeldata[modeldata$time == k&!is.na(modeldata[,i]),], weights = nlme::varIdent(~group),
+                  control = nlme::glsControl(maxIter=5000)), 
+                  error = function(e) NULL)
+          }
+          if(length( model[[paste(i,k)]])>0){
+          tmp <- data.frame(res = resid(model[[paste(i,k)]],type="pearson"), fitted = predict(model[[paste(i,k)]]))  
+          tmp$resdev <- abs(tmp$res) 
+         tmp$group <- modeldata[modeldata$time == k&!is.na(modeldata[,i]),group]
+          if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]>0.01 & summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]>0.01 &
+             anova(lm(res ~ group, data=tmp))$Pr[1]>0.01 & anova(lm(resdev ~ group, data=tmp))$Pr[1]>0.01){
+            for(j in levels(modeldata[,group])[-1]){
+            group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <- summary(model[[paste(i,k)]])$tTable[paste(group,j,sep=""),c(1,4)]
+            } 
+          } else {
+            model[[paste(i,k)]] <-  tryCatch(nlme::gls(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
+                  "+", confounders[3], "+", confounders[4], "+", confounders[5], "+ ", group, sep = "")), 
+                  data = modeldata[modeldata$time == k&!is.na(modeldata[,i]),], 
+                  weights = nlme::varComb(nlme::varExp(),nlme::varIdent(~group)),
+                  control = nlme::glsControl(maxIter=5000)), 
+                  error = function(e) NULL)
+            if(length(model[[paste(i,k)]])>0){
+           tmp <- data.frame(res = resid(model[[paste(i,k)]],type="pearson"), fitted = predict(model[[paste(i,k)]]))  
+          tmp$resdev <- abs(tmp$res) 
+         tmp$group <- modeldata[modeldata$time == k&!is.na(modeldata[,i]),group]
+          if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]>0.01 & summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]>0.01 &
+             anova(lm(res ~ group, data=tmp))$Pr[1]>0.01 & anova(lm(resdev ~ group, data=tmp))$Pr[1]>0.01){
+           for(j in levels(modeldata[,group])[-1]){
+            group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <- summary(model[[paste(i,k)]])$tTable[paste(group,j,sep=""),c(1,4)]
+            }  
+          }
+            }
+          }
+          }
+          }
+          }
             }
         }
         
+    colnames(group_test) <- gsub(x=colnames(group_test),pattern="group0",replacement = "0")
+            
      group_test$taxon <- rownames(group_test)
       group_test <- na.omit(group_test)  
       sig <- as.character(rownames(group_test)[sapply(data.frame(t(group_test[, grepl(pattern="p_",x=names(group_test))])), min,na.rm=T) < p.cutoff])
@@ -158,122 +210,123 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
                                error = function(e) NULL)
     }}
  
-    for(i in levels(resids$G)){
-      for(j in rownames(group_test)){
-        for(k in unique(resids$time)){
-        group_test[j,paste("DevianceFromExpected",k,i,sep="_")] <-  mean(resids[resids$G==i&resids$time==k,j],na.rm=T)
-      }
-    }
-    }
 
  write.table(group_test, paste("ChangeTest_", group, compare.to, "_", select.by, select, ".txt", 
             sep = ""), quote = F, row.names = F, sep = "\t")
    
-    dataset2 <- data.frame(resids)
+    dataset2 <- data.frame(resids[,c(sig,"G",time)])
     dataset2[,group] <- dataset2$G
     dataset2$grouptime <-paste(dataset2[, time], dataset2[, group], sep="/")
       
-        if (length(sig) > 0) {     
-       
-        
-            if (pdf) {
-                pdf(paste("ChangeTest_", group, compare.to, "_", select.by, select, "_Boxplot.pdf",  sep = ""))
-                par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                  1), mgp = c(3.5, 0.5, 0), mar = c(3, 5, 1, 1), tck = -0.01, 
-                  cex.axis = 1.1, cex.lab = 1.5)
-                for (i in sig) {
-                lab <- paste(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"][length(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"])],"deviance")
-               boxplot(dataset2[, i] ~ dataset2[, "grouptime"], 
-                    ylab = lab, xlab = group, boxfill = c("skyblue", 
-                    "yellowgreen", "pink", "turquoise2", "plum", "darkorange", 
-                    "lightyellow", "gray")[1:length(unique(dataset2[, group]))], 
-                    outpch = 21, outbg = c("skyblue", "yellowgreen", "pink", 
-                      "turquoise2", "plum", "darkorange", "lightyellow", "gray")[1:length(unique(dataset2[, 
-                      group]))], outcol = c("royalblue", "olivedrab4", "red", 
-                      "turquoise4", "purple", "darkorange3", "lightyellow4", 
-                      "black")[1:length(unique(dataset2[, group]))], boxcol = c("royalblue", 
-                      "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
-                      "lightyellow4", "black")[1:length(unique(dataset2[, group]))], 
-                    medcol = c("royalblue", "olivedrab4", "red", "turquoise4", 
-                      "purple", "darkorange3", "lightyellow4", "black")[1:length(unique(dataset2[, 
-                      group]))], whiskcol = c("royalblue", "olivedrab4", "red", 
-                      "turquoise4", "purple", "darkorange3", "lightyellow4", 
-                      "black")[1:length(unique(dataset2[, group]))], staplecol = c("royalblue", 
-                      "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
-                      "lightyellow4", "black")[1:length(unique(dataset2[, group]))], las=label.direction)
-                }
-                dev.off()
-                pdf(paste("Change_", group, compare.to, "_", select.by, select, "_Beanplot.pdf",  sep = ""))
-                par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                  1), mgp = c(2, 0.5, 0), mar = c(3, 3.5, 1, 1), tck = -0.01, 
-                  cex.axis = 1.1, cex.lab = 1.5)
-                for (i in sig) {
-                  lab <- paste(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"][length(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"])],"deviance")
-                  tryCatch(beanplot::beanplot(dataset2[, i] ~ paste(dataset2[, 
-                    time], dataset2[, group], sep="/"), ll = 0.1, ylab = lab, xlab = group, 
-                    col = list(c("skyblue", "royalblue", "royalblue", "royalblue"), 
-                      c("yellowgreen", "olivedrab4", "olivedrab4", "olivedrab4"), 
-                      c("pink", "red", "red", "red"), c("turquoise2", "turquoise4", 
-                        "turquoise4", "turquoise4"), c("plum", "purple", "purple", 
-                        "purple"), c("darkorange", "darkorange3", "darkorange3", 
-                        "darkorange3"), c("lightyellow", "lightyellow4", "lightyellow4", 
-                        "lightyellow4"), c("gray", "black", "black", "black"))[1:length(unique(dataset2[, 
-                      group]))], border = c("royalblue", "olivedrab4", "red", 
-                      "turquoise4", "purple", "darkorange3", "lightyellow4", 
-                      "black")[1:length(unique(dataset2[, group]))]), error = function(e) NULL)
-                }
-                dev.off()
-            }
-            
-            quartz()
-            par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                1), mgp = c(3.5, 0.5, 0), mar = c(3, 5, 1, 1), tck = -0.01, 
-                cex.axis = 1.1, cex.lab = 1.5)
-            
-           
-            for (i in sig) { 
-              lab <- paste(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"][length(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"])],"deviance")
-              boxplot(dataset2[, i] ~ dataset2[, "grouptime"],   
-           ylab = lab, xlab = group, 
-                  boxfill = c("skyblue",  "yellowgreen", "pink", "turquoise2", "plum","darkorange", 
-                  "lightyellow", "gray")[1:length(unique(dataset2[, group]))], 
-                  outpch = 21, outbg = c("skyblue", "yellowgreen", "pink", 
-                    "turquoise2", "plum", "darkorange", "lightyellow", "gray")[1:length(unique(dataset2[, 
-                    group]))], outcol = c("royalblue", "olivedrab4", "red", 
-                    "turquoise4", "purple", "darkorange3", "lightyellow4", 
-                    "black")[1:length(unique(dataset2[, group]))], boxcol = c("royalblue", 
-                    "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
-                    "lightyellow4", "black")[1:length(unique(dataset2[, group]))], 
-                  medcol = c("royalblue", "olivedrab4", "red", "turquoise4", 
-                    "purple", "darkorange3", "lightyellow4", "black")[1:length(unique(dataset2[, 
-                    group]))], whiskcol = c("royalblue", "olivedrab4", "red", 
-                    "turquoise4", "purple", "darkorange3", "lightyellow4", 
-                    "black")[1:length(unique(dataset2[, group]))], staplecol = c("royalblue", 
-                    "olivedrab4", "red", "turquoise4", "purple", "darkorange3", 
-                    "lightyellow4", "black")[1:length(unique(dataset2[, group]))],las=label.direction)
-            }
-            quartz()
-            par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
-                1), mgp = c(2, 0.5, 0), mar = c(3, 3.5, 1, 1), tck = -0.01, 
-                cex.axis = 1.1, cex.lab = 1.5)
-            for (i in sig) {
-              lab <- paste(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"][length(strsplit(i, split = "_", fixed = T)[[1]][strsplit(i, split = "_", fixed = T)[[1]]!="NA"])],"deviance")
-                tryCatch(beanplot::beanplot(dataset2[, i] ~ paste(dataset2[, 
-                  time], dataset2[, group], sep="/"), ll = 0.1, ylab = lab, xlab = group, 
-                  col = list(c("skyblue", "royalblue", "royalblue", "royalblue"), 
-                    c("yellowgreen", "olivedrab4", "olivedrab4", "olivedrab4"), 
-                    c("pink", "red", "red", "red"), c("turquoise2", "turquoise4", 
-                      "turquoise4", "turquoise4"), c("plum", "purple", "purple", 
-                      "purple"), c("darkorange", "darkorange3", "darkorange3", 
-                      "darkorange3"), c("lightyellow", "lightyellow4", "lightyellow4", 
-                      "lightyellow4"), c("gray", "black", "black", "black"))[1:length(unique(dataset2[, 
-                    group]))], border = c("royalblue", "olivedrab4", "red", 
-                    "turquoise4", "purple", "darkorange3", "lightyellow4", 
-                    "black")[1:length(unique(dataset2[, group]))]), error = function(e) NULL)
-            }
-            
-            
+    
+        if (length(sig) > 0) {
+        if (pdf) {
+            pdf(paste(group, compare.to, "_", select.by, select, "_Barplot.pdf", sep = ""))
+   par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), 
+      mgp = c(2, 0.5, 0), mar = c(2, 2, 1, 0.5), tck = -0.01, 
+                cex.axis = 1.2, cex.lab = 1,cex.main=0.8)
+            for(i in sig[order(sig)]){
+                 lab <- gsub(i,pattern="_NA",replacement = ".")  
+                 lab <- paste("Delta ",strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])])
+                  if(lab=="Delta ") lab <- "Delta Unassigned taxon"
+                  
+           boxplot(dataset2[, i] ~ dataset2[, "G"], yaxt="n", ylab="",main =  lab, xlab="", las = label.direction, 
+              col = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       "#A65628", "#F781BF", "#999999","blue","firebrick4",
+       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
+       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset2[,"G"]))], 
+       outpch = 21, outbg = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       "#A65628", "#F781BF", "#999999","blue","firebrick4",'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
+       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset2[, "G"]))])
+               axis(side=2)
+         }
+         
+           dev.off()
+            pdf(paste(group, compare.to, "_", select.by, select, "_Beanplot.pdf", sep = ""))
+                  par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), mgp = c(2, 0.5, 0), 
+               mar = c(2, 2, 1, 0.5), tck = -0.01, cex.axis = 1.2, cex.lab = 1,cex.main=0.8)
+               for(i in sig[order(sig)]){
+                lab <- gsub(i,pattern="_NA",replacement = ".")  
+                 lab <- paste("Delta ",strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])])
+                  if(lab=="Delta ") lab <- "Delta Unassigned taxon"
+                 
+              tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, "G"], xlab="", las = label.direction,yaxt="n",
+                  ll = 0.1, ylab = "", main=lab, beanlines="median",   col=list(c('#E41A1C','black','black','black'),
+         c('orange','black','black','black'),
+          c('#377EB8','black','black','black'),
+          c('skyblue','black','black','black'),
+          c("#4DAF4A",'black','black','black'),
+          c('#984EA3','black','black','black'),
+          c('#FFFF33','black','black','black'),
+         c('#A65628','black','black','black'),
+         c('#F781BF','black','black','black'),
+         c('#999999','black','black','black'),
+          c('blue','black','black','black'),
+          c('firebrick4','black','black','black'),
+          c('yellowgreen','black','black','black'),
+          c('pink','black','black','black'),
+          c('turquoise2','black','black','black'),
+          c('plum','black','black','black'),
+          c('darkorange','black','black','black'),
+          c('lightyellow','black','black','black'),
+          c('gray','black','black','black')),
+                  border = "black"), error = function(e) NULL)
+                  axis(side=2)
+        }    
+            dev.off()
+        }
+  quartz()
+  par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), 
+      mgp = c(2, 0.5, 0), mar = c(2, 2, 1, 0.5), tck = -0.01, 
+                cex.axis = 1.2, cex.lab = 1,cex.main=0.8)
+            for(i in sig[order(sig)]){
+                 lab <- gsub(i,pattern="_NA",replacement = ".")  
+                 lab <- paste("Delta ",strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])])
+                  if(lab=="Delta ") lab <- "Delta Unassigned taxon"
+                  
+           boxplot(dataset2[, i] ~ dataset2[, "G"], yaxt="n", ylab="",main =  lab, xlab="", las = label.direction, 
+              col = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       "#A65628", "#F781BF", "#999999","blue","firebrick4",
+       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
+       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset2[,"G"]))], 
+       outpch = 21, outbg = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       "#A65628", "#F781BF", "#999999","blue","firebrick4",'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
+       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset2[, "G"]))])
+               axis(side=2)
+         }
+    quartz()
+                  par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), mgp = c(2, 0.5, 0), 
+               mar = c(2, 2, 1, 0.5), tck = -0.01, cex.axis = 1.2, cex.lab = 1,cex.main=0.8)
+               for(i in sig[order(sig)]){
+                lab <- gsub(i,pattern="_NA",replacement = ".")  
+                 lab <- paste("Delta ",strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])])
+                  if(lab=="Delta ") lab <- "Delta Unassigned taxon"
+                 
+              tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, "G"], xlab="", las = label.direction,yaxt="n",
+                  ll = 0.1, ylab = "", main=lab, beanlines="median",   col=list(c('#E41A1C','black','black','black'),
+         c('orange','black','black','black'),
+          c('#377EB8','black','black','black'),
+          c('skyblue','black','black','black'),
+          c("#4DAF4A",'black','black','black'),
+          c('#984EA3','black','black','black'),
+          c('#FFFF33','black','black','black'),
+         c('#A65628','black','black','black'),
+         c('#F781BF','black','black','black'),
+         c('#999999','black','black','black'),
+          c('blue','black','black','black'),
+          c('firebrick4','black','black','black'),
+          c('yellowgreen','black','black','black'),
+          c('pink','black','black','black'),
+          c('turquoise2','black','black','black'),
+          c('plum','black','black','black'),
+          c('darkorange','black','black','black'),
+          c('lightyellow','black','black','black'),
+          c('gray','black','black','black')),
+                  border = "black"), error = function(e) NULL)
+                  axis(side=2)
+        } 
    
+ 
 library(metacoder)
     
 if(length(species.table)!=0){
@@ -316,7 +369,10 @@ for(i in rownames(group_test_summary2)){
 abu <- list()
 for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
 
-newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+#newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+ if(length(intersect(colnames(phylum),sp))==length(sp)){newseqs2 <- paste("XX ", names(seqs1)," ",seqs1," ", abu, sep="")
+#} else if( length(sp[grepl("GH_",sp)])==0) {newseqs2 <- paste("XX Bacteria_", names(seqs1)," ",seqs1," ", abu, sep="")
+ } else newseqs2 <- paste("XX Bacteria_", names(seqs1)," ",seqs1," ", abu, sep="")
 
 tmp2 <- extract_taxonomy(input=newseqs2,regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
                          key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_")
@@ -344,9 +400,9 @@ for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)])){
 heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100, 
                    node_label = ifelse(name == "NA", NA, name),
                    node_color = as.numeric(taxon_info_1),
-                   node_color_range=c("royalblue","cornflowerblue","gray90","hotpink","red"),
-                   node_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
-                   edge_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   node_color_range=c("royalblue","gray95","red"),
+                   node_color_interval = c(-3,3),#c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   edge_color_interval = c(-3,3),#c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
                    node_color_axis_label = paste(group,h,"compared to",compare.to),
                    node_size_axis_label = "Average relative abundance (%)",
           node_label_size_range=c(0.01,0.013),
@@ -382,13 +438,9 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
     for(i in unique(dataset[,group])) if(table(dataset[,group])[i] < 3) dataset[,group][dataset[,group]==i] <- "toofewcases"
     dataset <- dataset[dataset[,group]!="toofewcases",]
     dataset[, group] <- dataset[, group][drop = T]
-    if(length(compare.to)==0) compare.to = levels(as.factor(dataset[,group]))[1]
    dataset$G <- as.factor(dataset[,group])
-    if (compare.to != "0") dataset[, group][dataset[, group] == "0" & !is.na(dataset[, group])] <- "group0"
-    dataset[, group][dataset[, group] == compare.to & !is.na(dataset[, group])] <- "0"
     dataset[, group] <- as.factor(dataset[, group])
 
-        
    covariate_test <- data.frame(array(dim = c(length(names(taxa)), (1 + 2*length(levels(dataset[,group]))))))
    names(covariate_test) <- c("taxon", c(paste(covariate, levels(dataset[,group]),"estimate", sep = "_"),
                                               paste(covariate, levels(dataset[,group]),"p", sep = "_")))
@@ -401,30 +453,67 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
                     confounders[3], confounders[4], confounders[5], names(taxa), paste("baseline", 
                       names(taxa), sep = "")) != ""]])
     
- #for(i in unique(modeldata[,subject.ID])){ 
- #modeldata[modeldata[,subject.ID]==i,names(taxa)[apply(taxa[metadata[,subject.ID]==i,names(taxa)], MARGIN=2,FUN=max)==0]]<-NA
- # }  
 
     for (i in names(taxa)) {
     for (j in unique(modeldata[,group])) {
-    tryCatch(model[[paste(i,j)]] <- lm(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
+   model[[paste(i,j)]] <-  tryCatch(lm(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
                     "+", confounders[3], "+", confounders[4], "+", confounders[5], 
                     "+", covariate, sep = "")), data = modeldata[modeldata[,group]==j&!is.na(modeldata[,i]),]),
                     error = function(e) NULL)
-    if(length(model[[paste(i,j)]])>0 ){ 
-    if(nrow(summary(model[[paste(i,j)]])$coef)>1){
-    if(summary(model[[paste(i,j)]])$coef[covariate,4]!="NaN"&summary(model[[paste(i,j)]])$coef[covariate,4]!="NA"){
+    if(length(model[[paste(i,j)]])>0 & nrow(summary(model[[paste(i,j)]])$coef)>1 & summary(model[[paste(i,j)]])$coef[covariate,4]!="NaN" & 
+       summary(model[[paste(i,j)]])$coef[covariate,4]!="NA"){ 
+   
     tmp <- data.frame(res = resid(model[[paste(i,j)]],type="deviance"), pred = predict(model[[paste(i,j)]]))  
           tmp$covariate <- modeldata[modeldata[,group]==j&!is.na(modeldata[,i]),covariate]
-          tmp$resdev <- abs(tmp$res-0) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
-   covariate_test[i, c(paste(covariate, j, "estimate",sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$coef[covariate,c(1,4)]# -c(1:(2 + length(confounders[confounders !=""])))
- }}}}}}}
-                }
-            }
+          tmp$resdev <- abs(tmp$res) 
+         
+    if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 & 
+       summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+
+   covariate_test[i, c(paste(covariate, j, "estimate",sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$coef[covariate,c(1,4)]
+    } else {
+      if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]<0.01){
+        model[[paste(i,j)]] <-  tryCatch(nlme::gls(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
+                    "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                    "+", covariate, sep = "")), data = modeldata[modeldata[,group]==j&!is.na(modeldata[,i]),],
+                     weights = nlme::varExp(),  control = nlme::glsControl(maxIter=5000)),
+                    error = function(e) NULL)   
+    } else {
+        model[[paste(i,j)]] <-  tryCatch(nlme::gls(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
+                    "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                    "+", covariate, sep = "")), data = modeldata[modeldata[,group]==j&!is.na(modeldata[,i]),],
+                     weights = nlme::varExp(form= as.formula(paste("~",covariate))),  
+                    control = nlme::glsControl(maxIter=5000)),
+                    error = function(e) NULL)   
+    }
+          
+     if(length(model[[paste(i,j)]])>0){ 
+        tmp <- data.frame(res = resid(model[[paste(i,j)]],type="pearson"), pred = predict(model[[paste(i,j)]]))  
+          tmp$covariate <- modeldata[modeldata[,group]==j&!is.na(modeldata[,i]),covariate]
+          tmp$resdev <- abs(tmp$res)
+      if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 & 
+       summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+         covariate_test[i, c(paste(covariate, j, "estimate",sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$tTable[covariate,c(1,4)]
+      } else {
+         model[[paste(i,j)]] <-  tryCatch(nlme::gls(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
+                    "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                    "+", covariate, sep = "")), data = modeldata[modeldata[,group]==j&!is.na(modeldata[,i]),],
+                     weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate)))),  
+                    control = nlme::glsControl(maxIter=5000)),
+                    error = function(e) NULL)  
+         
+    if(length(model[[paste(i,j)]])>0){ 
+        tmp <- data.frame(res = resid(model[[paste(i,j)]],type="pearson"), pred = predict(model[[paste(i,j)]]))  
+          tmp$covariate <- modeldata[modeldata[,group]==j&!is.na(modeldata[,i]),covariate]
+          tmp$resdev <- abs(tmp$res)
+      if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.01 & 
+       summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.01){
+         covariate_test[i, c(paste(covariate, j, "estimate",sep = "_"),paste(covariate, j,"p", sep = "_"))] <- summary(model[[paste(i,j)]])$tTable[covariate,c(1,4)]
+      }
+      }}
+     } 
+      } }}}
+            
           for (i in names(covariate_test)[-1]) covariate_test[, i] <- as.numeric(covariate_test[, i])
          sig <- na.omit(names(apply(covariate_test[,grepl(pattern="_p",x=colnames(covariate_test))],MARGIN = 1,FUN = min)[apply(covariate_test[,grepl(pattern="_p",x=colnames(covariate_test))],MARGIN = 1,FUN = min)<p.cutoff]))
    
@@ -459,8 +548,8 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
   ggplot2::theme_bw()+
   ggplot2::xlab(covariate)+
   ggplot2::geom_point(pch=20) + 
-  ggplot2::scale_color_manual(name=group,values=c('gray30','red','turquoise4','olivedrab4','purple','darkorange3','lightyellow4','black')[1:length(levels(factor(df[,'gr'])))])+ 
-  ggplot2::scale_fill_manual(name=group,values=c('cornflowerblue','pink','turquoise2','yellowgreen','plum','darkorange','lightyellow','gray')[1:length(levels(factor(df[,'gr'])))])+
+  ggplot2::scale_color_manual(name=group,values=c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",'gray30','red','turquoise4','olivedrab4','purple','darkorange3','lightyellow4','black')[1:length(levels(factor(df[,'gr'])))])+ 
+  ggplot2::scale_fill_manual(name=group,values=c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",'cornflowerblue','pink','turquoise2','yellowgreen','plum','darkorange','lightyellow','gray')[1:length(levels(factor(df[,'gr'])))])+
   ggplot2::theme(legend.position = "right",strip.background =  ggplot2::element_rect(color = "white",fill="white"))+
   ggplot2::ylab('Deviance from expected') 
 
@@ -519,7 +608,10 @@ for(i in rownames(covariate_test_summary2)){
 abu <- list()
 for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
 
-newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+#newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+ if(length(intersect(colnames(phylum),sp))==length(sp)){newseqs2 <- paste("XX ", names(seqs1)," ",seqs1," ", abu, sep="")
+#} else if( length(sp[grepl("GH_",sp)])==0) {newseqs2 <- paste("XX Bacteria_", names(seqs1)," ",seqs1," ", abu, sep="")
+ } else newseqs2 <- paste("XX Bacteria_", names(seqs1)," ",seqs1," ", abu, sep="")
 
 tmp2 <-  metacoder::extract_taxonomy(input=newseqs2,regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
                          key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_")
@@ -584,28 +676,67 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
                   confounders[1], confounders[2], confounders[3], confounders[4], 
                   confounders[5], names(taxa), paste("baseline", names(taxa), sep = "")) != ""]])
  
-#            for(i in unique(modeldata[,subject.ID])){ 
-# modeldata[modeldata[,subject.ID]==i,names(taxa)[apply(taxa[metadata[,subject.ID]==i,names(taxa)], MARGIN=2,FUN=max)==0]]<-NA
-#  } 
             for (i in names(taxa)) {
-                tryCatch(model[[i]] <- lm(as.formula(paste(i, 
+                model[[i]] <- tryCatch(lm(as.formula(paste(i, 
                   "~baseline", i, "+", confounders[1], "+", confounders[2], 
                   "+", confounders[3], "+", confounders[4], "+", confounders[5], 
                   "+", covariate, sep = "")), data = modeldata), 
                   error = function(e) NULL)
           if(length(model[[i]])>0){
-          if(nrow(summary(model[[i]])$coef)>1){
-         if(summary(model[[i]])$coef[2,4]!="NaN"){
           tmp <- data.frame(res = resid(model[[i]],type="deviance"), pred = predict(model[[i]]))  
           tmp$covariate <- modeldata[!is.na(modeldata[,i]),covariate]
-          tmp$resdev <- abs(tmp$res-0) 
-         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(res ~ covariate, data=tmp))$Pr[1]>0.05){
-          if(summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05){
-          if(anova(lm(resdev ~ covariate, data=tmp))$Pr[1]>0.05){
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & summary(lm(res ~ covariate, data=tmp))$coef[2,4]>0.01 &
+       summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & summary(lm(resdev ~ covariate, data=tmp))$coef[2,4]>0.01){
                   covariate_test[i, c(paste(covariate, "estimate", sep = "_"),paste(covariate, "p", sep = "_"))] <- summary(model[[i]])$coef[covariate,c(1, 4)]
- }}}}}}}
-            }
+         } else {
+           if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.05 | summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.05 ){
+            model[[i]] <- tryCatch(nlme::gls(as.formula(paste(i, 
+                  "~baseline", i, "+", confounders[1], "+", confounders[2], 
+                  "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                  "+", covariate, sep = "")), data = modeldata,
+                   weights = nlme::varExp()), 
+                  error = function(e) NULL)  
+           } else {
+           model[[i]] <- tryCatch(nlme::gls(as.formula(paste(i, 
+                  "~baseline", i, "+", confounders[1], "+", confounders[2], 
+                  "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                  "+", covariate, sep = "")), data = modeldata,
+                  weights = nlme::varExp(form = as.formula(paste("~",covariate)))), 
+                  error = function(e) NULL) 
+           }
+           
+          if(length(model[[i]])>0){
+           tmp <- data.frame(res = resid(model[[i]],type="pearson"), pred = predict(model[[i]]))  
+          tmp$covariate <- modeldata[!is.na(modeldata[,i]),covariate]
+          tmp$resdev <- abs(tmp$res) 
+         if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & summary(lm(res ~ covariate, data=tmp))$coef[2,4]>0.01 &
+       summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & summary(lm(resdev ~ covariate, data=tmp))$coef[2,4]>0.01){
+                  covariate_test[i, c(paste(covariate, "estimate", sep = "_"),paste(covariate, "p", sep = "_"))] <- summary(model[[i]])$tTable[covariate,c(1, 4)]
+         } else {
+          model[[i]] <- tryCatch(nlme::gls(as.formula(paste(i, 
+                  "~baseline", i, "+", confounders[1], "+", confounders[2], 
+                  "+", confounders[3], "+", confounders[4], "+", confounders[5], 
+                  "+", covariate, sep = "")), data = modeldata,
+                weights = nlme::varComb(nlme::varExp(),nlme::varExp(form= as.formula(paste("~",covariate))))), 
+                  error = function(e) NULL)  
+          if(length(model[[i]])>0){
+           tmp <- data.frame(res = resid(model[[i]],type="pearson"), pred = predict(model[[i]]))  
+          tmp$covariate <- modeldata[!is.na(modeldata[,i]),covariate]
+          tmp$resdev <- abs(tmp$res) 
+          if(summary(lm(tmp$res ~ tmp$pred))$coef[2,4]>0.01 & summary(lm(res ~ covariate, data=tmp))$coef[2,4]>0.01 &
+       summary(lm(tmp$resdev ~ tmp$pred))$coef[2,4]>0.01 & summary(lm(resdev ~ covariate, data=tmp))$coef[2,4]>0.01){
+                  covariate_test[i, c(paste(covariate, "estimate", sep = "_"),paste(covariate, "p", sep = "_"))] <- summary(model[[i]])$tTable[covariate,c(1, 4)]
+                
+         }
+          } 
+         }  
+           
+           
+         }
+          
+          }}}
+            
 
             covariate_test <- na.omit(covariate_test)
            
@@ -638,8 +769,8 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
                   ggplot2::theme_bw() + 
                   ggplot2::xlab(covariate) + 
                   ggplot2::geom_point(pch=20) + 
-  ggplot2::scale_color_manual(name=group,values=c('gray30','red','turquoise4','olivedrab4','purple','darkorange3','lightyellow4','black')[1:length(levels(factor(df[,'gr'])))])+ 
-  ggplot2::scale_fill_manual(name=group,values=c('cornflowerblue','pink','turquoise2','yellowgreen','plum','darkorange','lightyellow','gray')[1:length(levels(factor(df[,'gr'])))])+
+  ggplot2::scale_color_manual(name=group,values=c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",'gray30','red','turquoise4','olivedrab4','purple','darkorange3','lightyellow4','black')[1:length(levels(factor(df[,'gr'])))])+ 
+  ggplot2::scale_fill_manual(name=group,values=c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",'cornflowerblue','pink','turquoise2','yellowgreen','plum','darkorange','lightyellow','gray')[1:length(levels(factor(df[,'gr'])))])+
   ggplot2::theme(legend.position = "right",strip.background =  ggplot2::element_rect(color = "white",fill="white"))+
       ggplot2::ylab('Deviance from expected') 
  
@@ -695,7 +826,8 @@ for(i in rownames(covariate_test_summary2)){
 abu <- list()
 for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
 
-newseqs2 <- paste("XX", names(seqs1),seqs1, abu, sep=" ")
+ if(length(intersect(colnames(phylum),sp))==length(sp)){newseqs2 <- paste("XX ", names(seqs1)," ",seqs1," ", abu, sep="")
+ } else newseqs2 <- paste("XX Bacteria_", names(seqs1)," ",seqs1," ", abu, sep="")
 
 tmp2 <-  metacoder::extract_taxonomy(input=newseqs2,regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
                          key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_")
@@ -737,7 +869,7 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
           node_size_range=c(0.012,0.05),
           node_color_trans="linear",
           title=paste("Associations with", covariate), title_size=0.03,
-          output_file=paste(covariate,"_",h, "_", select.by, select,"_HeatTree.pdf",sep=""))
+          output_file=paste(covariate, "_", select.by, select,"_HeatTree.pdf",sep=""))
 
 
 

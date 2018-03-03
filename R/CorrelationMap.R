@@ -36,13 +36,14 @@ for (i in names(reltaxa)) {
 spnames <- names(reltaxa)
 
 classnamesN <- rep(1,length(spnames))
-if (length(strsplit(names(reltaxa)[1], split = "_", fixed = T)[[1]])>1){
-   classnames <- sapply(spnames, function(x) strsplit(x, split = "_", fixed = T)[[1]][2])
+#if (length(strsplit(names(reltaxa)[1], split = "_", fixed = T)[[1]])>1){
+if (taxonomic.table!="CAZy_table.txt"){classnames <- sapply(spnames, function(x) strsplit(x, split = "_", fixed = T)[[1]][1])
+} else { classnames <- sapply(spnames, function(x) substr(x, start = 1, stop=2)[[1]][1])}
    classes <- levels(as.factor(classnames))
   classesN <- order(levels(as.factor(classnames)))   
   classnamesN <-classnames
   for(i in 1:length(classnames)) classnamesN[i] <-  classesN[classes==classnames[i]]
-}
+
 
 spnames <- sapply(spnames, function(x) gsub("_NA", ".", x))
 spnames <- sapply(spnames, function(x) gsub("_1", ".", x))
@@ -56,8 +57,10 @@ spnames <- sapply(spnames, function(x) strsplit(x, split = "_",
 names(reltaxa) <- spnames
 metadata <- metadata[,variables]
  
-palette(c("black","firebrick4","hotpink","skyblue","yellowgreen", "turquoise2", "plum", "darkorange", "gray","royalblue", "olivedrab4", "tomato", 
-                      "turquoise4", "purple", "darkorange3", "lightyellow4"))
+palette(c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       "#A65628", "#F781BF", "#999999","blue","firebrick4",
+       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
+       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
 n<-nrow(reltaxa)
 df<-n-2
 correl <- cor(log(reltaxa+0.000001),metadata,use="pairwise.complete.obs")[,colSums(abs(cor(log(reltaxa+0.000001),metadata,use="pairwise.complete.obs")),na.rm=T)>0]
@@ -74,11 +77,11 @@ correl.sym[correl.p>0.05]<-""
 if (pdf){
 pdf("CorrelatioMap.pdf");
  gplots::heatmap.2(correl,col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
-                  cellnote=correl.sym,,notecol = "black",
+                  cellnote=correl.sym,notecol = "black",
           keysize=1,key.xlab = "Correlation",margins=c(10,10),colRow=as.numeric(classnamesN))
 dev.off()
 }
-quartz() 
+quartz();par(mar=c(2,2,2,5)) 
 gplots::heatmap.2(correl, col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
                   RowSideColors=classnamesN,
          cellnote=correl.sym,notecol = "black", keysize=1,key.xlab = "Correlation",margins=c(10,10),

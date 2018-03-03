@@ -1,10 +1,12 @@
-Organise <- function(meta, sample.names, otutable = list.files(pattern = "_otutable.txt$")[1], 
-    taxonomic.tables = list.files(pattern = "_table.txt$"), subject.ID = NULL, 
-    time = NULL) {
+Organise <- function(meta, sample.names, 
+                     readtable = list.files(pattern = "annotated_read_table.txt$")[1],
+                     otutable = list.files(pattern = "_otutable.txt$")[1], 
+                     taxonomic.tables = list.files(pattern = "_table.txt$")[-1], 
+                     subject.ID = NULL, time = NULL) {
   
     metadata <- read.delim(meta)
     rownames(metadata) <- metadata[, sample.names]
-    readtable <- data.frame(t(read.table(list.files(pattern = "annotated_read_table.txt$")[1], header = T, row.names = 1, check.names = F)))
+    readtable <- data.frame(t(read.table(readtable, header = T, row.names = 1, check.names = F)))
     readtable <- readtable[rownames(metadata), ]
     genera <- sapply(colnames(readtable), function(x) strsplit(x, split="_")[[1]][5])
     generalist <- list()
@@ -28,8 +30,8 @@ Organise <- function(meta, sample.names, otutable = list.files(pattern = "_otuta
     reads <- read.table(list.files(pattern="readnumbers.txt"), header = T, row.names = "sample", 
         check.names = F)
     reads <- reads[rownames(metadata), ]
-    metadata$ReadCount <- reads$processed_reads
-    metadata$ReadCountClass <- Hmisc::cut2(metadata$ReadCount, g = 4, digits = 1)
+  metadata$ReadCount <- reads$processed_reads
+    metadata$ReadCountClass <- cut(metadata$ReadCount,breaks=c(-1,100,1000,10000,100000,1000000),labels=c("<100","100-1000","1000-10000","10000-100000",">100000"))
     
     pdf("RichnessReadcount.pdf")
     plot(metadata$Richness ~ metadata$ReadCount, ylab = "OTU Richness", xlab = "Number of reads", 
