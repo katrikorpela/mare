@@ -2,7 +2,7 @@
 \alias{HITChip2Seq}
 
 \title{
-Transform HITChip species-level data into taxonomic tables
+Transform HITChip data into taxonomic tables
 }
 \description{
 Takes the species-level HITChip data table and transforms it into taxonomic tables in the same format as the output of TaxonomicTable.

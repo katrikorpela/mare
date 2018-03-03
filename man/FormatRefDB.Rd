@@ -4,7 +4,7 @@
 Create a UDB-format reference database
 }
 \description{
-Creates a reference database in UDB-format, which is compatible with the USEARCH function 
+Creates a reference database in UDB-format, which is compatible with the USEARCH function UTAX
 for taxonomic annotation. Optionally, the reference database can be restricted to 
 gut-associated taxa, and/or only to named species.
 }

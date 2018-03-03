@@ -9,7 +9,7 @@ The function plots the relative abundances of selected bacterial taxa against a 
 }
 \usage{
 CovariatePlot(meta, taxonomic.table, covariate, taxa, smooth.method = "loess", 
-    readcount.cutoff = 0, select.by = NULL, select = NULL, pdf = F, quartz = T)
+    readcount.cutoff = 0, select.by = NULL, select = NULL, pdf = F, logtrans = F, nozeros = F)
 }
 
 \arguments{
@@ -40,8 +40,11 @@ Determines which value on the selection variable will be selected.
    \item{pdf}{
 Should the figure be saved as pdf? If yes, specify TRUE.
 }
-  \item{quartz}{
-Plot the figure into a quartz device (default). If your OS does not support quartz, set to FALSE.
+  \item{logtrans}{
+Should the bacterial abundances be log-transformed? TRUE or FALSE.
+}
+  \item{logtrans}{
+Should zero values be omitted from the plot? TRUE or FALSE.
 }
 }
 \author{

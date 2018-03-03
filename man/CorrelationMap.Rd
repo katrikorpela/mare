@@ -7,9 +7,9 @@ Heatmap of correlations between bacterial taxa and host variables
 Calculates the correlations between bacterial taxa and selected variables in the metadata file, and plots the correlations as a heatmap.
   }
 \usage{
-CorrelationMap(taxonomic.table, meta, variables, readcount.cutoff = 0,
-              select.by = NULL, selection = NULL,  outlier.cutoff = 3,  
-               min.abundance = 0, min.prevalence = 0, pdf = F, quartz = T)
+CorrelationMap(taxonomic.table, meta, variables, select.by = NULL, 
+                           selection = NULL,  outlier.cutoff = 3, readcount.cutoff = 0, 
+                           min.abundance = 0, min.prevalence = 0, pdf = F)
 }
 
 \arguments{
@@ -44,9 +44,7 @@ Minimum acceptable prevalence of taxa (proportion of all samples). Used with min
 \item{pdf}{
 Should the figure be saved as pdf? If yes, specify TRUE.
 }
-  \item{quartz}{
-Plot the figure into a quartz device (default). If your OS does not support quartz, set to FALSE.
-}
+
 }
 
 \author{
@@ -56,7 +54,7 @@ Katri Korpela
 \examples{
 \dontrun{
 #Plot the correlations between genus-level bacterial taxa and the first 15 variables in the metadata file.
-#Select only taxa whose relative abundance is > 0.1 in > half of all samples.
+#Select only taxa whose relative abundance is >0.1 in >half of all samples.
 #Save the plot as PDF.
 
 CorrelationMap(taxonomic.table = 'organised_genus_table.txt',

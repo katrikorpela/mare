@@ -8,10 +8,11 @@ Test how bacterial taxa and host variables together influence the response varia
 Combine information on bacterial taxa and a set of host variables into one model for the response variable. PathModel finds the bacterial taxa and host variables that together are significantly associated with the response variable, and the host variables that are associated with the response-variable-associated bacterial taxa.
 }
 \usage{
-PathModel(taxonomic.table, meta, response = NULL, binomial.response = F, variables, readcount.cutoff = 0, 
-    subject.ID = NULL,  outlier.cutoff, 
-    select.by = NULL, select = NULL, pdf = F, 
-    min.prevalence = 0, min.abundance = 0, quartz = T, keep.result = F)
+PathModel(taxonomic.table, meta, response = NULL, 
+                      binomial.response = F, count.response = F, variables, readcount.cutoff = 0, 
+                      outlier.cutoff = 3, 
+                      select.by = NULL, select = NULL, pdf = F, 
+                      min.prevalence = 0, min.abundance = 0, keep.result = F)
 }
 
 \arguments{
@@ -22,21 +23,21 @@ Taxonomic table containing the bacterial taxa to be tested. Should be the organi
 Metadata file.
 }
   \item{response}{
-The response variable. This has to be either a numerical variable or a binary variable containing 0s and 1s. If the response variable is omitted, the model will use all bacterial taxa as the response variables, and finds the best total model for each taxon.
+The response variable. This has to be a numerical variable: binary (0s and 1s), counts of observations, or continuous. If the response variable is omitted, the model will use all bacterial taxa as the response variables, and finds the best total model for each taxon.
 }
   \item{binomial.response}{
-Set to TRUE if the response variable is not numerical but contains only 0s and 1s.
+Set to TRUE if the response variable contains only 0s and 1s.
+}
+  \item{count.response}{
+Set to TRUE if the response variable is measured as counts of observations.
 }
   \item{variables}{
-Indices or names of the metadata file that you want to use as additional explanatory variables in the model.
+Indices or names of the metadata file that you want to use as additional explanatory variables in the model. These must be numerical, categorical variables cannot be used.
 } 
 \item{readcount.cutoff}{
 Lowest acceptable read count per sample. Samples with fewer reads are ignored.
 }
 
-  \item{subject.ID}{
-If some samples are paired (e.g. from the same individual or family), specify which variable in the metadata file indicates the sample grouping (e.g. subject ID). In CovariateTest and GroupTest, a mixed model will be used, with the subject.ID as the random factor. In ChangeTest, this is required.
-}
   \item{outlier.cutoff}{
 Highest acceptable standard deviation from the overall mean abundance for a given taxon. Data points exceeding this value will be replaced by the cut-off value to eliminate disproportional effect of outliers on the results.
 }
@@ -65,7 +66,7 @@ Store the results as a list. The first item on the list is the response model, a
 }
 }
 \details{
-PathModel first fits a linear model (make sure your variable is normally distributed) or a binomial model (for 0/1 response variables) separately to all bacterial taxa and host variables, then selects the best of those into a combined model and performs model reduction using AIC to simplify the model. It then performs the same model selection for each of the bacterial taxa retained in response variable model, now fitting negative binomial models. Then the best overall model is plotted, including the bacterial taxa and host variables associated with the response variable, and the host variables associated with these bacterial taxa.
+PathModel first fits a linear model (make sure your variable is normally distributed) or a binomial model (for 0/1 response variables) or a negative binomial model (for count variables) separately to all bacterial taxa and host variables, then selects the best of those into a combined model and performs model reduction using AIC to simplify the model. It then performs the same model selection for each of the bacterial taxa retained in response variable model, now fitting negative binomial models. Then the best overall model is plotted, including the bacterial taxa and host variables associated with the response variable, and the host variables associated with these bacterial taxa.
 
 }
 

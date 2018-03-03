@@ -6,10 +6,13 @@
 Create taxonomic tables
 }
 \description{
-The function assigns taxonomies (using USEARCH) for the OTUs or the unclustered reads, and creates taxonomic tables, as well as an annotated read table, in which all unique reads are assigned a taxonomy. Treating each unique read as a separate taxonomic unit offers the highest possible taxonomic resolution. 
+The function assigns taxonomies (using USEARCH) for the reads, and creates taxonomic tables, as well as an annotated read table, in which all unique reads are assigned a taxonomy. Treating each unique read as a separate taxonomic unit offers the highest possible taxonomic resolution. 
 }
 \usage{
-TaxonomicTable(usearch.path, refDB, folder.name = "", confidence.cutoff = 0.5)
+TaxonomicTable(usearch.path, 
+              refDB = system.file("extdata/silva_full.udb",package="mare"), 
+              folder.name = "", 
+              confidence.cutoff = 0.5)
 }
 
 \arguments{
@@ -17,7 +20,7 @@ TaxonomicTable(usearch.path, refDB, folder.name = "", confidence.cutoff = 0.5)
 Directory of the USEARCH program.
 }
   \item{refDB}{
-Reference database.
+Reference database. Defaults to the SILVA database that comes with mare.
 }
   \item{annotate.reads}{
 Should the reads be taxonomically annotated instead of the OTUs? TRUE is yes, FALSE if no.
@@ -33,13 +36,12 @@ Lowest acceptable taxonomic confidence value.
 
 \examples{
 	\dontrun{
-#Taxonomically annotate the reads (instead of the OTUs) that are in folder ExampleProcessedReads, 
-#using 0.6 confidence cut-off and the gut-specific reference database created by FormatRefDB. 
+#Taxonomically annotate the reads that are in folder ExampleProcessedReads, 
+#using 0.6 confidence cut-off and a reference database created by FormatRefDB. 
 #Then create taxonomic tables, which are written into a new folder called ExampleTaxonomicTables.
 
 TaxonomicTable(usearch.path = '/path/to/USEARCH8',
-                          reference.database =  'GutDB.udb',
-                          annotate.reads = T,
+                          reference.database =  'myrefDB.udb',
                           folder.name = 'Example',
                           confidence.cutoff = 0.6)
 

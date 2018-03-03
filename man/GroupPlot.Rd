@@ -8,9 +8,9 @@ Visualise group differences
 The function prints five different plots to visualise group differences in selected bacterial taxa.
 }
 \usage{
-GroupPlot(taxa, group = NULL, taxonomic.table, meta, readcount.cutoff = 0, stacked = T, 
-bar = T, box = T, bean = T, covariate = NULL, smooth.method = 'loess',select.by = NULL, 
-select = NULL, pdf = F, quartz = T, label.direction = 1)
+GroupPlot(taxa = NULL, group = NULL, taxonomic.table, meta, readcount.cutoff = 0, 
+         stacked = T, bar = T, box = T, bean = T, covariate = NULL, 
+         smooth.method ='loess',select.by = NULL, select = NULL, pdf = F, label.direction = 1, logtrans = F)
 }
 \arguments{
   \item{taxa}{
@@ -60,6 +60,9 @@ Plot the figure into a quartz device (default). If your OS does not support quar
 }
   \item{label.direction}{
 Direction of the x-axis labels: 1 = horizontal,  2 = vertical.
+}
+  \item{log.trans}{
+Log-transform data relative abundances for boxplots? TRUE or FALSE, default is FALSE.
 }
 }
 

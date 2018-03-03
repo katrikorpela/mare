@@ -4,14 +4,14 @@
 Predict carbohydrate metabolism
 }
 \description{
-The function mappes the taxa in your samples to the CAZy database and predicts the abundance of carbohydrate-processessing genes. 
+The function mappes the taxa in your samples to the CAZy database and predicts the abundance of taxa producing carbohydrate-active enzymes. 
 }
 \usage{
-CAZy(genus_table)
+CAZy(genus.table)
 }
 
 \arguments{
-  \item{species}{
+  \item{genus.table}{
 The organised genus-level taxonomic table.
 }
 }

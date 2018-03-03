@@ -8,7 +8,8 @@ The function conducts principal coordinates analysis using Bray-Curtis dissimila
 }
 \usage{
 PCoA(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, group2 = NULL,
-    components = c(1, 2), background.variable = NULL, colour.scheme = terrain.colors, legendplace = "topright", 
+    components = c(1, 2), background.variable = NULL, colour.scheme = terrain.colors, 
+    ellipse = F, hull = F, spider = F, legendplace = "topright", 
     select.by = NULL, select = NULL, relative = F, pdf = F, keep.result = F)
 }
 
@@ -37,6 +38,15 @@ Name of the continuous variable from the metadata file or a bacterial taxon to b
   \item{colour.scheme}{
 Backround colour scheme. Must be one of the following:  terrain.colors (default), heat.colors,topo.colors, or cm.colors. Do NOT put the colour.scheme in quotes!
 }
+  \item{ellipse}{
+Draw standard deviation ellipse for each group using function ordiellipse from package vegan.
+}
+  \item{hull}{
+Draw outline for each group using function ordihull from package vegan.
+}
+  \item{spider}{
+Draw lines joining the samples within each group using function ordispider from package vegan.
+}
   \item{legendplace}{
 Place of the group legend in the figure. Options are "bottomright", "bottom", "bottomleft", "left", "topleft", "top", "topright", "right" and "center".
 }
@@ -44,13 +54,16 @@ Place of the group legend in the figure. Options are "bottomright", "bottom", "b
 Name of a variable in the metadata file by which a subset will be selected for plotting.
 }
   \item{select}{
-Determines which value on the selection variable will be selected for plotting.
+Determines which value of the selection variable will be selected for plotting.
 }
   \item{relative}{
 Should relative abundances rather than absolute counts be used? If yes, specify TRUE.
 }
 \item{pdf}{
 Should the figure be saved as pdf? If yes, specify TRUE.
+}
+\item{keep.result}{
+Should the PC-component scores be returned? If yes, specify TRUE.
 }
 }
 
@@ -66,14 +79,14 @@ Katri Korpela
 \dontrun{
 #Plot the first two principal coordinates in the genus-level data, ignoring samples with 
 #fewer than 2000 reads, showing differences between treatment groups, and the OTU 
-#richness as the background colour.	Save the plot as PDF.
+#richness as the background colour.	Save the plot as PDF. Save the result as R object "pctable".
 
 pctable <- PCoA(taxonomic.table = 'organised_genus_table.txt',
                 meta = 'meta.txt', 
                 group = 'Treatment', 
                 background.variable = 'Richness', 
                 readcount.cutoff = 2000,
-                pdf = T)
+                pdf = T, keep.results = T)
 	
 }
 }
