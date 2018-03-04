@@ -52,11 +52,11 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
     if (consecutive) {
         for (k in colnames(deltataxa)) deltataxa[, paste("baseline", k, sep = "")] <- NA
         for (i in names(table(metadata$ID)[table(metadata$ID) > 1])) {
-            #metadata$time[metadata$ID == i] <- order(metadata$time[metadata$ID == i])
+            metadata$time[metadata$ID == i] <- order(metadata$time[metadata$ID == i])
             for (j in unique(metadata$time[metadata$ID == i][order(metadata$time[metadata$ID == i])])[-1]) {
                 for (k in colnames(reltaxa)) {
-                  deltataxa[metadata$ID == i & metadata$time == j, k] <- reltaxa[metadata$ID == 
-                    i & metadata$time == j, k] - reltaxa[metadata$ID == i &  metadata$time == (j - 1), k]
+                  deltataxa[metadata$ID == i & metadata$time == j, k] <- reltaxa[metadata$ID == i & metadata$time == j, k] - 
+                    reltaxa[metadata$ID == i &  metadata$time == (j - 1), k]
                   tryCatch(deltataxa[metadata$ID == i & metadata$time == j, 
                     paste("baseline", k, sep = "")] <- reltaxa[metadata$ID == i & metadata$time == (j - 1), k], 
                     error = function(e) NULL)
@@ -66,16 +66,17 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
     } else {
         for (k in colnames(deltataxa)) deltataxa[, paste("baseline", k, sep = "")] <- NA
         for (i in names(table(metadata$ID)[table(metadata$ID) > 1])) {
-            for (j in unique(metadata$time[metadata$ID == i][order(metadata$time[metadata$ID == i])])[-1]) {
+          if(1%in%metadata$time[metadata$ID==i]){
+            for (j in unique(metadata$time[metadata$ID == i])[unique(metadata$time[metadata$ID == i])!=1]) {
                 for (k in colnames(reltaxa)) {
-                  deltataxa[metadata$ID == i & metadata$time == j, k] <- reltaxa[metadata$ID == 
-                    i & metadata$time == j, k] - reltaxa[metadata$ID == i & 
-                    metadata$time == 1, k]
+                  deltataxa[metadata$ID == i & metadata$time == j, k] <- reltaxa[metadata$ID ==  i & metadata$time == j, k] - 
+                    reltaxa[metadata$ID == i & metadata$time == 1, k]
                   tryCatch(deltataxa[metadata$ID == i & metadata$time == j, 
-                    paste("baseline", k, sep = "")] <- reltaxa[metadata$ID == 
-                    i & metadata$time == 1, k], error = function(e) NULL)
+                    paste("baseline", k, sep = "")] <- reltaxa[metadata$ID ==  i & metadata$time == 1, k], 
+                    error = function(e) NULL)
                 }
             }
+        }
         }
     }
     
@@ -113,7 +114,7 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
     dataset[, group] <- as.factor(dataset[, group])
    
     for(i in c(1:ncol(dataset))[-c(1:ncol(metadata),ncol(dataset))]){
-      if(min(dataset[,i]) == max(dataset[,i]))dataset[,i] <- NA
+      if(min(dataset[,i], na.rm = T) == max(dataset[,i], na.rm = T)) dataset[,i] <- NA
      }
     
     grouptime <- paste(dataset[dataset$time != 1 & dataset[, group] != "0" & dataset[,group]!="other","time"], 
@@ -125,15 +126,13 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
                   confounders[5], names(taxa), paste("baseline", names(taxa), sep = "")) != ""]])
   modeldata[, group] <- modeldata[, group][drop=T]
         
-#for(i in unique(modeldata[,subject.ID])){ 
-# modeldata[modeldata[,subject.ID]==i,names(taxa)[apply(taxa[metadata[,subject.ID]==i,names(taxa)], MARGIN=2,FUN=max)==0]]<-NA
-#  }
+
         group_test <- data.frame(array(dim = c(length(names(taxa)), 1 + 2*(length(levels(as.factor(grouptime)))))))
         rownames(group_test) <- names(taxa)
         names(group_test) <- c("taxon", paste("estimate_",levels(as.factor(grouptime)),sep=""),paste("p_",levels(as.factor(grouptime)),sep=""))
         
         for (i in names(taxa)) {
-            for (k in unique(modeldata$time)) {
+            for (k in names(table(modeldata$time)[table(modeldata$time)>3])) {
               model[[paste(i,k)]] <-  tryCatch(lm(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
                   "+", confounders[3], "+", confounders[4], "+", confounders[5], "+ ", group, sep = "")), 
                   data = modeldata[modeldata$time == k&!is.na(modeldata[,i]),]), 
@@ -145,7 +144,8 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
           if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]>0.01 & summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]>0.01 &
              anova(lm(res ~ group, data=tmp))$Pr[1]>0.01 & anova(lm(resdev ~ group, data=tmp))$Pr[1]>0.01){
           for(j in levels(modeldata[,group])[-1]){
-            group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <- summary(model[[paste(i,k)]])$coef[paste(group,j,sep=""),c(1,4)]
+            tryCatch(group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <- summary(model[[paste(i,k)]])$coef[paste(group,j,sep=""),c(1,4)],
+               error = function(e) NULL  )
             }   
           } else {
             if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]<0.01){
@@ -168,8 +168,9 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
           if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]>0.01 & summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]>0.01 &
              anova(lm(res ~ group, data=tmp))$Pr[1]>0.01 & anova(lm(resdev ~ group, data=tmp))$Pr[1]>0.01){
             for(j in levels(modeldata[,group])[-1]){
-            group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <- summary(model[[paste(i,k)]])$tTable[paste(group,j,sep=""),c(1,4)]
-            } 
+            tryCatch(group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <- summary(model[[paste(i,k)]])$tTable[paste(group,j,sep=""),c(1,4)],
+            error = function(e) NULL)
+              } 
           } else {
             model[[paste(i,k)]] <-  tryCatch(nlme::gls(as.formula(paste(i, "~baseline", i, "+", confounders[1], "+", confounders[2], 
                   "+", confounders[3], "+", confounders[4], "+", confounders[5], "+ ", group, sep = "")), 
@@ -184,8 +185,9 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
           if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]>0.01 & summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]>0.01 &
              anova(lm(res ~ group, data=tmp))$Pr[1]>0.01 & anova(lm(resdev ~ group, data=tmp))$Pr[1]>0.01){
            for(j in levels(modeldata[,group])[-1]){
-            group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <- summary(model[[paste(i,k)]])$tTable[paste(group,j,sep=""),c(1,4)]
-            }  
+            tryCatch(group_test[i, c(paste("estimate_",k,"/",j,sep=""),paste("p_",k,"/",j,sep=""))] <- summary(model[[paste(i,k)]])$tTable[paste(group,j,sep=""),c(1,4)],
+            error = function(e) NULL)
+             }  
           }
             }
           }
@@ -198,7 +200,7 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
     colnames(group_test) <- gsub(x=colnames(group_test),pattern="group0",replacement = "0")
             
      group_test$taxon <- rownames(group_test)
-      group_test <- na.omit(group_test)  
+   
       sig <- as.character(rownames(group_test)[sapply(data.frame(t(group_test[, grepl(pattern="p_",x=names(group_test))])), min,na.rm=T) < p.cutoff])
      for (k in names(group_test)[grepl(pattern="p_",x=names(group_test))]) group_test[, paste(k, "FDR", sep = "_")] <- p.adjust(group_test[,k], "fdr")
    
@@ -206,7 +208,7 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
   
     for(i in rownames(group_test)){
       for(k in unique(modeldata$time)){
-      resids[resids$time==k&!is.na(resids[,i]),i] <-  tryCatch(resid(update(model[[paste(i,k)]], as.formula(paste(".~. -",group,sep="")))),
+     tryCatch( resids[resids$time==k&!is.na(resids[,i]),i] <-  resid(update(model[[paste(i,k)]], as.formula(paste(".~. -",group,sep="")))),
                                error = function(e) NULL)
     }}
  
@@ -221,111 +223,49 @@ ChangeTest <- function(species.table=NULL, genus.table=NULL, family.table=NULL, 
     
         if (length(sig) > 0) {
         if (pdf) {
-            pdf(paste(group, compare.to, "_", select.by, select, "_Barplot.pdf", sep = ""))
+            pdf(paste(group, compare.to, "_", select.by, select, "_Boxplot.pdf", sep = ""))
    par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), 
-      mgp = c(2, 0.5, 0), mar = c(2, 2, 1, 0.5), tck = -0.01, 
+      mgp = c(2, 0.5, 0), mar = c(3, 3, 2, 0.5), tck = -0.01, 
                 cex.axis = 1.2, cex.lab = 1,cex.main=0.8)
             for(i in sig[order(sig)]){
                  lab <- gsub(i,pattern="_NA",replacement = ".")  
                  lab <- paste("Delta ",strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])])
                   if(lab=="Delta ") lab <- "Delta Unassigned taxon"
                   
-           boxplot(dataset2[, i] ~ dataset2[, "G"], yaxt="n", ylab="",main =  lab, xlab="", las = label.direction, 
-              col = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+           boxplot(dataset2[, i] ~ dataset2[, "grouptime"], yaxt="n", ylab =  lab, xlab="", las = label.direction, 
+              col = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,
        "#A65628", "#F781BF", "#999999","blue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset2[,"G"]))], 
-       outpch = 21, outbg = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       outpch = 21, outbg = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,
        "#A65628", "#F781BF", "#999999","blue","firebrick4",'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset2[, "G"]))])
                axis(side=2)
          }
          
            dev.off()
-            pdf(paste(group, compare.to, "_", select.by, select, "_Beanplot.pdf", sep = ""))
-                  par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), mgp = c(2, 0.5, 0), 
-               mar = c(2, 2, 1, 0.5), tck = -0.01, cex.axis = 1.2, cex.lab = 1,cex.main=0.8)
-               for(i in sig[order(sig)]){
-                lab <- gsub(i,pattern="_NA",replacement = ".")  
-                 lab <- paste("Delta ",strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])])
-                  if(lab=="Delta ") lab <- "Delta Unassigned taxon"
-                 
-              tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, "G"], xlab="", las = label.direction,yaxt="n",
-                  ll = 0.1, ylab = "", main=lab, beanlines="median",   col=list(c('#E41A1C','black','black','black'),
-         c('orange','black','black','black'),
-          c('#377EB8','black','black','black'),
-          c('skyblue','black','black','black'),
-          c("#4DAF4A",'black','black','black'),
-          c('#984EA3','black','black','black'),
-          c('#FFFF33','black','black','black'),
-         c('#A65628','black','black','black'),
-         c('#F781BF','black','black','black'),
-         c('#999999','black','black','black'),
-          c('blue','black','black','black'),
-          c('firebrick4','black','black','black'),
-          c('yellowgreen','black','black','black'),
-          c('pink','black','black','black'),
-          c('turquoise2','black','black','black'),
-          c('plum','black','black','black'),
-          c('darkorange','black','black','black'),
-          c('lightyellow','black','black','black'),
-          c('gray','black','black','black')),
-                  border = "black"), error = function(e) NULL)
-                  axis(side=2)
-        }    
-            dev.off()
+            
         }
   quartz()
   par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), 
-      mgp = c(2, 0.5, 0), mar = c(2, 2, 1, 0.5), tck = -0.01, 
+      mgp = c(2, 0.5, 0), mar = c(3, 3, 2, 0.5), tck = -0.01, 
                 cex.axis = 1.2, cex.lab = 1,cex.main=0.8)
             for(i in sig[order(sig)]){
                  lab <- gsub(i,pattern="_NA",replacement = ".")  
                  lab <- paste("Delta ",strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])])
                   if(lab=="Delta ") lab <- "Delta Unassigned taxon"
                   
-           boxplot(dataset2[, i] ~ dataset2[, "G"], yaxt="n", ylab="",main =  lab, xlab="", las = label.direction, 
-              col = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+           boxplot(dataset2[, i] ~ dataset2[, "grouptime"], yaxt="n", ylab =  lab, xlab="", las = label.direction, 
+              col = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,
        "#A65628", "#F781BF", "#999999","blue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset2[,"G"]))], 
-       outpch = 21, outbg = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       outpch = 21, outbg = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,
        "#A65628", "#F781BF", "#999999","blue","firebrick4",'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset2[, "G"]))])
                axis(side=2)
          }
-    quartz()
-                  par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), mgp = c(2, 0.5, 0), 
-               mar = c(2, 2, 1, 0.5), tck = -0.01, cex.axis = 1.2, cex.lab = 1,cex.main=0.8)
-               for(i in sig[order(sig)]){
-                lab <- gsub(i,pattern="_NA",replacement = ".")  
-                 lab <- paste("Delta ",strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])])
-                  if(lab=="Delta ") lab <- "Delta Unassigned taxon"
-                 
-              tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, "G"], xlab="", las = label.direction,yaxt="n",
-                  ll = 0.1, ylab = "", main=lab, beanlines="median",   col=list(c('#E41A1C','black','black','black'),
-         c('orange','black','black','black'),
-          c('#377EB8','black','black','black'),
-          c('skyblue','black','black','black'),
-          c("#4DAF4A",'black','black','black'),
-          c('#984EA3','black','black','black'),
-          c('#FFFF33','black','black','black'),
-         c('#A65628','black','black','black'),
-         c('#F781BF','black','black','black'),
-         c('#999999','black','black','black'),
-          c('blue','black','black','black'),
-          c('firebrick4','black','black','black'),
-          c('yellowgreen','black','black','black'),
-          c('pink','black','black','black'),
-          c('turquoise2','black','black','black'),
-          c('plum','black','black','black'),
-          c('darkorange','black','black','black'),
-          c('lightyellow','black','black','black'),
-          c('gray','black','black','black')),
-                  border = "black"), error = function(e) NULL)
-                  axis(side=2)
-        } 
-   
+
  
 library(metacoder)
     
@@ -351,12 +291,15 @@ if(length(species.table)!=0){
 
 for(h in unique(dataset[,"G"])[unique(dataset[,"G"])!=compare.to & !is.na(unique(dataset[,"G"]))]){
   for(t in unique(dataset[,"time"])[unique(dataset[,"time"])>1 & !is.na(unique(dataset[,"time"]))]){
-group_test_summary <- group_test[,c("taxon",paste("estimate_",t,"/",h,sep=""),paste("p_",t,"/",h,sep=""))]
+group_test_summary <- tryCatch(group_test[,c("taxon",paste("estimate_",t,"/",h,sep=""),paste("p_",t,"/",h,sep=""))],
+         error = function(e) NULL)
+if(length(group_test_summary)>0){
+if(length(na.omit(group_test_summary[,2]))>0){
 group_test_summary$name <- sapply(group_test_summary$taxon, function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
 rownames(group_test_summary)<-  group_test_summary$taxon
 group_test_summary[,paste("estimate_",t,"/",h,sep="")][group_test_summary[,paste("p_",t,"/",h,sep="")] > p.cutoff] <- 0
 group_test_summary2 <- group_test_summary[intersect(sp,rownames(group_test_summary)),]
-  
+
 seqs1 <- list()
 for(i in rownames(group_test_summary2)){
   if(!is.na(group_test_summary2[i,paste("p_",t,"/",h,sep="")]))  if(group_test_summary2[i,paste("p_",t,"/",h,sep="")]<p.cutoff)  seqs1[[group_test_summary2[i,"taxon"]]]<- group_test_summary2[i,paste("estimate_",t,"/",h,sep="")]
@@ -415,10 +358,11 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
           node_size_range=c(0.012,0.05),
           node_color_trans="linear",
           title=paste("Differences between groups", h, "and", compare.to), title_size=0.03,
-          output_file=paste(group,h,"vs", compare.to, "_", select.by, select,"_HeatTree.pdf",sep=""))
+          output_file=paste("Time",t,group,h,"vs", compare.to, "_", select.by, select,"_HeatTree.pdf",sep=""))
 }
 }
-   
+  }  
+}
 #------------
             
             

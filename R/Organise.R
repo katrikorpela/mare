@@ -1,6 +1,6 @@
 Organise <- function(meta, sample.names, 
                      readtable = list.files(pattern = "annotated_read_table.txt$")[1],
-                     otutable = list.files(pattern = "_otutable.txt$")[1], 
+                     otutable = list.files(pattern = "otutable.txt$")[1], 
                      taxonomic.tables = list.files(pattern = "_table.txt$")[-1], 
                      subject.ID = NULL, time = NULL) {
   

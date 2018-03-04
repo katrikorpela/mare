@@ -43,13 +43,13 @@ spnames1 <- sapply(spnames1, function(x) strsplit(x, split = "_",
             fixed = T)[[1]][length(strsplit(x, split = "_", fixed = T)[[1]])])
 
 spnames <- rownames(g2.cor2)
+classnames <- sapply(spnames, function(x) strsplit(x, split = "_", fixed = T)[[1]][2])
 spnames <- sapply(spnames, function(x) gsub("_NA", ".", x))
 spnames <- sapply(spnames, function(x) gsub("_1", ".", x))
 spnames <- sapply(spnames, function(x) gsub("_2", ".", x))
 spnames <- sapply(spnames, function(x) gsub("_3", ".", x))
 spnames <- sapply(spnames, function(x) gsub("_4", ".", x))
 spnames <- sapply(spnames, function(x) gsub("_5", ".", x))
-classnames <- sapply(spnames, function(x) strsplit(x, split = "_", fixed = T)[[1]][2])
 spnames <- sapply(spnames, function(x) strsplit(x, split = "_", 
             fixed = T)[[1]][length(strsplit(x, split = "_", fixed = T)[[1]])])
 
@@ -58,7 +58,7 @@ clus<-cutree(clusters,h=cluster.similarity)
 
 
 if (pdf){
-pdf("CorrelatingTaxa.pdf") 
+pdf(paste("CorrelatingTaxa_",select.by,select,".pdf",sep=""))
 plot(clusters, ylab="",labels=spnames1,xlab="",cex=0.5) 
 abline(h=cluster.similarity, lty=2, col="gray")
 
@@ -67,10 +67,10 @@ qgraph::qgraph(g2.cor2,vsize=5,rescale=T,repulsion=0.8,
                layout="spring",diag=F,
        legend.cex=0.5,
        groups=classnames,
-       color=c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","gray","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       color=c("gray","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
-       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4'),
+       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4')[1:length(unique(classnames))],
        label.prop=0.99)
 mtext(side=3,text="Correlations",line=2)
 
@@ -86,10 +86,10 @@ qgraph::qgraph(g2.cor2,vsize=5,rescale=T,repulsion=0.8,
           labels=substr(spnames,start=1,stop=6),layout="spring",diag=F,
        legend.cex=0.5,label.prop=0.99,borders=F, negCol = "red",posCol="yellowgreen",
        groups=classnames,
-       color=c("gray","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
+       color=c("gray","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
-       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4'))
+       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4')[1:length(unique(classnames))])
 mtext(side=3,text="Correlations",line=2)
 
 networks <- data.frame(metadata,taxatable)

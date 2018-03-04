@@ -41,9 +41,9 @@ GroupPlot <- function(taxa = NULL, group = NULL, taxonomic.table, meta, readcoun
  picwidth <- log(length(levels(as.factor(dataset[,group]))))*10
 if(picwidth>10) picwidth2 = 10 else picwidth2 = picwidth
   
- palette(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3", "#FF7F00" ,"#FFFF33", 
+ palette(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
-       'pink','turquoise2','plum','darkorange','lightyellow','gray',
+       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
 
  
@@ -82,7 +82,7 @@ if(pdf){
 pdf(width=picwidth,paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Stackedplot.pdf", sep = ""))
 op<-par(xpd=T,mar=c(10,5,2,20),cex.axis=1.5,cex.lab=1.5)
 barplot(as.matrix(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1])),
-col=(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3", "#FF7F00" ,"#FFFF33", 
+col=(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')),
@@ -99,7 +99,7 @@ par(op)}
 quartz(width=picwidth2)
 op<-par(xpd=T,mar=c(10,5,2,20),cex.axis=1.5,cex.lab=1.5)
 barplot(as.matrix(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1])),
-col=(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3", "#FF7F00" ,"#FFFF33", 
+col=(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')),
@@ -150,7 +150,7 @@ par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
        #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], cex=legsize)
@@ -230,7 +230,7 @@ par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
        #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], cex=legsize)
@@ -304,7 +304,7 @@ col="black")
 lines(unlist(trmeans[i,]-(0.001*max(unlist(1.05*trmeans[i,])))),type="h",lwd=14,lend=1,
 ylim=c(0,max(unlist(1.05*trmeans[i,])+unlist(trse[i,]))),
 xlim=c(0.5,ncol(trmeans)+0.5),
-col=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+col=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
@@ -322,7 +322,7 @@ par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
        #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], cex=legsize)
@@ -344,7 +344,7 @@ col="black")
 lines(unlist(trmeans[i,]-(0.001*max(unlist(1.05*trmeans[i,])))),type="h",lwd=14,lend=1,
 ylim=c(0,max(unlist(1.05*trmeans[i,])+unlist(trse[i,]))),
 xlim=c(0.5,ncol(trmeans)+0.5),
-col=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+col=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
@@ -362,7 +362,7 @@ par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
        #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], cex=legsize)
@@ -379,11 +379,11 @@ par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0
     cex.axis=1.5,cex.lab=0.5)
 for(i in taxa) {
 boxplot(dataset[,i]~dataset[,group],ylab="",xlab="",outpch=21,axes=F, #las=label.direction,
-col=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+col=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-outbg=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+outbg=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))])
@@ -402,7 +402,7 @@ par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
        #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], cex=legsize)
@@ -439,11 +439,11 @@ par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0
     cex.axis=1)
 for(i in taxa) {
 boxplot(dataset[,i]~dataset[,group],ylab="",xlab="",outpch=21,axes=F, #las=label.direction,
-col=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+col=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-outbg=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+outbg=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))])
@@ -461,7 +461,7 @@ par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
        #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"darkolivegreen2","#984EA3", "#FF7F00" ,"#FFFF33", 
+       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], cex=legsize)

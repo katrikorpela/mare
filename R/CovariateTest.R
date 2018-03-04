@@ -632,11 +632,11 @@ if(length(model[[paste(i,j,"nonzero")]])>0){
       ggplot2::ylab('Deviance from expected') 
     }
   if(pdf){
-pdf(width=2*sqrt(length(sig)),paste(covariate,"_",group, "_", select.by,select, "_", "Covariateplot.pdf", sep = ""));
+pdf(width=4*sqrt(length(sig)),paste(covariate,"_",group, "_", select.by,select, "_", "Covariateplot.pdf", sep = ""));
 plot(p)
 dev.off() 
 }       
- quartz(width=2*sqrt(length(sig))) 
+ quartz(width=4*sqrt(length(sig))) 
   plot(p)
 
 #------------
@@ -1275,11 +1275,11 @@ if (length(sig) > 0) {
    }
 
   if(pdf){
-pdf(width=3*sqrt(length(sig)),paste(covariate,"_",group, "_", select.by,select, "_", "Covariateplot.pdf", sep = ""));
+pdf(width=4*sqrt(length(sig)),paste(covariate,"_",group, "_", select.by,select, "_", "Covariateplot.pdf", sep = ""));
 plot(p)
 dev.off() 
 }       
-quartz(width=3*sqrt(length(sig))) 
+quartz(width=4*sqrt(length(sig))) 
   plot(p)
          
       

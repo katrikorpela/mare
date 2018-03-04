@@ -75,10 +75,11 @@ correl.sym[correl.p>0.05]<-""
 
 
 if (pdf){
-pdf("CorrelatioMap.pdf");
- gplots::heatmap.2(correl,col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
-                  cellnote=correl.sym,notecol = "black",
-          keysize=1,key.xlab = "Correlation",margins=c(10,10),colRow=as.numeric(classnamesN))
+pdf(paste("CorrelationMap_",select.by,select,sep="",".pdf"))
+gplots::heatmap.2(correl, col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
+                  RowSideColors=classnamesN,
+         cellnote=correl.sym,notecol = "black", keysize=1,key.xlab = "Correlation",margins=c(10,10),
+         colRow=as.numeric(classnamesN))
 dev.off()
 }
 quartz();par(mar=c(2,2,2,5)) 
