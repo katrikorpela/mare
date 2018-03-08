@@ -636,8 +636,8 @@ pdf(width=4*sqrt(length(sig)),paste(covariate,"_",group, "_", select.by,select, 
 plot(p)
 dev.off() 
 }       
- quartz(width=4*sqrt(length(sig))) 
-  plot(p)
+ #quartz(width=4*sqrt(length(sig))) 
+  quartz();plot(p)
 
 #------------
 library(metacoder)
@@ -1279,8 +1279,8 @@ pdf(width=4*sqrt(length(sig)),paste(covariate,"_",group, "_", select.by,select, 
 plot(p)
 dev.off() 
 }       
-quartz(width=4*sqrt(length(sig))) 
-  plot(p)
+#quartz(width=4*sqrt(length(sig))) 
+ quartz(); plot(p)
          
       
 library(metacoder)

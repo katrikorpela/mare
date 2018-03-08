@@ -38,8 +38,8 @@ GroupPlot <- function(taxa = NULL, group = NULL, taxonomic.table, meta, readcoun
  if(length(taxa)>10) {legsize = 1.5  } else legsize <- 2 
  
  
- picwidth <- log(length(levels(as.factor(dataset[,group]))))*10
-if(picwidth>10) picwidth2 = 10 else picwidth2 = picwidth
+# picwidth <- log(length(levels(as.factor(dataset[,group]))))*10
+#if(picwidth>10) picwidth2 = 10 else picwidth2 = picwidth
   
  palette(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
@@ -96,7 +96,8 @@ ylab="% of total microbiota")#, ylim=c(0,100))
 dev.off()
 par(op)}
 
-quartz(width=picwidth2)
+#quartz(width=picwidth2)
+  quartz()
 op<-par(xpd=T,mar=c(10,5,2,20),cex.axis=1.5,cex.lab=1.5)
 barplot(as.matrix(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1])),
 col=(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
@@ -118,8 +119,9 @@ par(op)
 if(bean){
 if(logtrans) { lg="y" } else lg=""
   
-quartz(width=picwidth2)
-  par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.5,0),mar=c(1,3.5,1,1),tck=-0.01,cex.axis=1,cex.lab=1)
+#quartz(width=picwidth2)
+   quartz()
+   par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.5,0),mar=c(1,3.5,1,1),tck=-0.01,cex.axis=1,cex.lab=1)
   for(i in taxa) {
 try(beanplot::beanplot(dataset[,i]~dataset[,group],ll=0.1,ylab=i,
                        xlab="",xaxt="n",#las=label.direction,
@@ -158,8 +160,9 @@ legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])),
 df = na.omit(reshape2::melt(dataset[,c(group,taxa)], id=c(group)))
 names(df)[1] <- c("group")
 
-quartz(width=picwidth2)
-par(mar=c(20,4,3,3))
+#quartz(width=picwidth2)
+  quartz()
+  par(mar=c(20,4,3,3))
 tryCatch(beanplot::beanplot((value)~paste(variable,group),data=df,las=2,
         yaxt="n",xaxt="n",
         ylab="Relative abundance (%)",
@@ -329,8 +332,9 @@ legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])),
 
 dev.off()
 }  
-quartz(width=picwidth2*0.75) 
-par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.2,0),mar=c(1,3.5,1,1),tck=-0.01,cex.axis=1.5)
+#quartz(width=picwidth2*0.75) 
+  quartz()
+  par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.2,0),mar=c(1,3.5,1,1),tck=-0.01,cex.axis=1.5)
 trmeans<-data.frame(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1]))
 trse<- data.frame(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),FUN=sd,na.rm=T)[,-1])/c(sqrt(table(as.factor(dataset[,group])))))
 names(trmeans)<-levels(as.factor(dataset[,group]))
@@ -434,8 +438,9 @@ dev.off()
 }
 
   
-quartz(width=picwidth2)
-par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.2,0),mar=c(1,3.5,1,1),tck=-0.01,
+#quartz(width=picwidth2)
+  quartz()
+  par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.2,0),mar=c(1,3.5,1,1),tck=-0.01,
     cex.axis=1)
 for(i in taxa) {
 boxplot(dataset[,i]~dataset[,group],ylab="",xlab="",outpch=21,axes=F, #las=label.direction,
@@ -470,8 +475,9 @@ legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])),
 #-------
 df = na.omit(reshape2::melt(dataset[,c(group,taxa)], id=c(group)))
 names(df)[1] <- c("group")
-quartz(width=picwidth2)
-par(mar=c(20,4,3,3))
+#quartz(width=picwidth2)
+  quartz()
+  par(mar=c(20,4,3,3))
 boxplot((value)~paste(variable,group),
         data=df,las=2,col=c(1:length(levels(dataset[,group]))),#log="y",
         outpch=21,outbg=c(1:length(levels(dataset[,group]))),cex=0.5,
