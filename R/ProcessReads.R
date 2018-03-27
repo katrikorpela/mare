@@ -176,7 +176,6 @@ ProcessReads <- function(forward.reads = NULL,
         message("No names attribute found in dnaSet object...", "using artifically generated names")
         names(dnaSet) <- paste("read", 1:length(dnaSet), sep = "-")
     }
-    dnaSet <- suppressWarnings(dnaSet[order(dnaSet)]) 
     counts <- BiocGenerics::table(dnaSet)
     dnaSet <- unique(dnaSet)
     names(dnaSet) <- paste0(paste("read", 1:length(names(dnaSet)), sep = "_"), 
@@ -235,7 +234,10 @@ ProcessReads <- function(forward.reads = NULL,
     write.table(readnumbers, paste(folder.name, "readnumbers.txt",sep="_"), quote = F, row.names = F, sep = "\t")
     readnumbers$raw_reads <- readnumbers$raw_reads - readnumbers$processed_reads
     
-    pdf(paste(folder.name,"Readnumbers.pdf",sep="_"), width = nrow(readnumbers)/4)
+    wi <- nrow(readnumbers)/4
+    if(wi < 4) wi <- 4
+    
+    pdf(paste(folder.name,"Readnumbers.pdf",sep="_"), width = wi)
     par(xpd = T, mar = c(max(nchar(rownames(readnumbers)))/2, 6, 4, 4), mgp = c(3, 0.5, 0),tcl = 0.1)
   barplot(as.matrix(t(readnumbers[, c(3, 2)])), ylab = "Number of reads", 
         legend.text = c("Kept", "Discarded"), args.legend = list(ncol = 2, 
