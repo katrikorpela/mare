@@ -18,7 +18,6 @@ GroupPlot <- function(taxa = NULL, group = NULL, taxonomic.table, meta, readcoun
   
   names(taxatable)<- sapply(names(taxatable),function(x) gsub('_NA', '.',x))
   names(taxatable) <- sapply(names(taxatable),function(x) strsplit(x,split='_')[[1]][length(strsplit(x,split='_')[[1]])])
-  #names(taxatable)[names(taxatable)==names(table(names(taxatable))[table(names(taxatable))>1])] <- paste(names(taxatable)[names(taxatable)==names(table(names(taxatable))[table(names(taxatable))>1])],c(1:length(names(taxatable)[names(taxatable)==names(table(names(taxatable))[table(names(taxatable))>1])])),sep="")
   for(i in names(table(names(taxatable))[table(names(taxatable))>1])) names(taxatable)[grep(names(taxatable),pattern=i)] <- paste(i,c(1:length(names(taxatable)[grep(names(taxatable),pattern=i)])),sep="")
     
    taxa <- names(taxatable)
@@ -37,10 +36,6 @@ GroupPlot <- function(taxa = NULL, group = NULL, taxonomic.table, meta, readcoun
 
  if(length(taxa)>10) {legsize = 1.5  } else legsize <- 2 
  
- 
-picwidth <- log(length(levels(as.factor(dataset[,group]))))*10
-if(picwidth>10) picwidth2 = 10 else picwidth2 = picwidth
-  
  palette(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
@@ -79,24 +74,19 @@ plot(p)
 if(stacked){
 
 if(pdf){
-pdf(width=picwidth,paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Stackedplot.pdf", sep = ""))
-op<-par(xpd=T,mar=c(10,5,2,20),cex.axis=1.5,cex.lab=1.5)
+  pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Stackedplot.pdf", sep = ""))
+  op<-par(xpd=T,mar=c(10,5,2,20),cex.axis=1.5,cex.lab=1.5)
 barplot(as.matrix(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1])),
 col=(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')),
-#legend=T,args.legend=list(x=-(picwidth/4),text.font=3,bty="n"),
 legend=T,args.legend=list(x="left",inset=1,text.font=3,bty="n"),
 names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab="",
-#yaxt="n",
 ylab="% of total microbiota")#, ylim=c(0,100))
-#axis(side=2, line=-5)
-#mtext(side=2,line=-2,text="% of total microbiota",cex=1.5)
 dev.off()
 par(op)}
 
-#quartz(width=picwidth2)
   quartz()
 op<-par(xpd=T,mar=c(10,5,2,20),cex.axis=1.5,cex.lab=1.5)
 barplot(as.matrix(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1])),
@@ -104,13 +94,9 @@ col=(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')),
-#legend=T,args.legend=list(x=-(picwidth/4),text.font=3,bty="n"),
 legend=T,args.legend=list(x="left",inset=1,text.font=3,bty="n"),
 names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab="",
-#yaxt="n",
 ylab="% of total microbiota")#, ylim=c(0,100))
-#axis(side=2, line=-5)
-#mtext(side=2,line=-2,text="% of total microbiota",cex=1.5)
 par(op)
 
 } 
@@ -119,8 +105,7 @@ par(op)
 if(bean){
 if(logtrans) { lg="y" } else lg=""
   
-#quartz(width=picwidth2)
-   quartz()
+ quartz()
    par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.5,0),mar=c(1,3.5,1,1),tck=-0.01,cex.axis=1,cex.lab=1)
   for(i in taxa) {
 try(beanplot::beanplot(dataset[,i]~dataset[,group],ll=0.1,ylab=i,
@@ -151,8 +136,7 @@ border=c('black')))
 par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
-       #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
+      fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], cex=legsize)
@@ -160,8 +144,7 @@ legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])),
 df = na.omit(reshape2::melt(dataset[,c(group,taxa)], id=c(group)))
 names(df)[1] <- c("group")
 
-#quartz(width=picwidth2)
-  quartz()
+quartz()
   par(mar=c(20,4,3,3))
 tryCatch(beanplot::beanplot((value)~paste(variable,group),data=df,las=2,
         yaxt="n",xaxt="n",
@@ -202,7 +185,7 @@ tryCatch(legend("topleft",title=group,legend=levels(dataset[,group]),fil=c(1:len
 
 
 if(pdf){
-pdf(width=picwidth, paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Beanplots.pdf", sep = ""))
+ pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Beanplots.pdf", sep = ""))
   par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.5,0),mar=c(1,3.5,1,1),tck=-0.01,cex.axis=1,cex.lab=1)
   for(i in taxa) {
   try(beanplot::beanplot(dataset[,i]~dataset[,group],ll=0.1,ylab=i,xlab="",xaxt="n",#las=label.direction,
@@ -232,8 +215,7 @@ border=c('black')))
 par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
-       #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-       fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
+      fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], cex=legsize)
@@ -243,7 +225,7 @@ legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])),
  #-------
 df = na.omit(reshape2::melt(dataset[,c(group,taxa)], id=c(group)))
 names(df)[1] <- c("group")
-pdf(width=picwidth,paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Beanplot.pdf", sep = ""))
+pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Beanplot.pdf", sep = ""))
 par(mar=c(20,4,3,3))
 tryCatch(beanplot::beanplot((value)~paste(variable,group),data=df,las=2,
         yaxt="n",xaxt="n",
@@ -292,8 +274,8 @@ dev.off()
  
 if(bar){
 if(pdf){
-pdf(width=picwidth*0.75, paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Barplot.pdf", sep = ""))
-par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.2,0),mar=c(1,3.5,1,1),tck=-0.01,cex.axis=1.5)
+ pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Barplot.pdf", sep = ""))
+  par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.2,0),mar=c(1,3.5,1,1),tck=-0.01,cex.axis=1.5)
 trmeans<-data.frame(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1]))
 trse<- data.frame(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),FUN=sd,na.rm=T)[,-1])/c(sqrt(table(as.factor(dataset[,group])))))
 names(trmeans)<-levels(as.factor(dataset[,group]))
@@ -301,8 +283,7 @@ names(trse)<-levels(as.factor(dataset[,group]))
 for(i in rownames(trmeans)){ 
 plot(unlist(trmeans[i,]),type="h",lwd=15,lend=1,axes=F,ylab="",xlab="",
 ylim=c(0,max(unlist(1.05*trmeans[i,])+unlist(trse[i,]),na.rm=T)),
-xlim=c(0.5,ncol(trmeans)+0.5),#col=c(1:ncol(trmeans)),
-#col=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
+xlim=c(0.5,ncol(trmeans)+0.5),
 col="black")
 lines(unlist(trmeans[i,]-(0.001*max(unlist(1.05*trmeans[i,])))),type="h",lwd=14,lend=1,
 ylim=c(0,max(unlist(1.05*trmeans[i,])+unlist(trse[i,]))),
@@ -316,7 +297,6 @@ arrows(x0=c(c(1:ncol(trmeans))),x1=c(c(1:ncol(trmeans))),
        y1=unlist(trmeans[i,])+unlist(trse[i,]),
        length=0.05,angle=90,code=3,
        col="black")#c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
-#mtext(side=1,line=0.5,at=c(1:ncol(trmeans)),text=levels(as.factor(dataset[,group])),cex=1,las=label.direction)
 mtext(side=2,text=i,line=1.5,cex=0.75,font=3)
 axis(side=2,at=pretty(seq(0,max(unlist(trmeans[i,])),max(unlist(trmeans[i,]))/10)),
   labels=pretty(seq(0,max(unlist(trmeans[i,])),max(unlist(trmeans[i,]))/10),digits=2))
@@ -324,7 +304,6 @@ axis(side=2,at=pretty(seq(0,max(unlist(trmeans[i,])),max(unlist(trmeans[i,]))/10
 par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
-       #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
        fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
@@ -332,7 +311,6 @@ legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])),
 
 dev.off()
 }  
-#quartz(width=picwidth2*0.75) 
   quartz()
   par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.2,0),mar=c(1,3.5,1,1),tck=-0.01,cex.axis=1.5)
 trmeans<-data.frame(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1]))
@@ -342,9 +320,7 @@ names(trse)<-levels(as.factor(dataset[,group]))
 for(i in rownames(trmeans)){ 
 plot(unlist(trmeans[i,]),type="h",lwd=15,lend=1,axes=F,ylab="",xlab="",
 ylim=c(0,max(unlist(1.05*trmeans[i,])+unlist(trse[i,]),na.rm=T)),
-xlim=c(0.5,ncol(trmeans)+0.5),#col=c(1:ncol(trmeans)),
-#col=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
-col="black")
+xlim=c(0.5,ncol(trmeans)+0.5),col="black")
 lines(unlist(trmeans[i,]-(0.001*max(unlist(1.05*trmeans[i,])))),type="h",lwd=14,lend=1,
 ylim=c(0,max(unlist(1.05*trmeans[i,])+unlist(trse[i,]))),
 xlim=c(0.5,ncol(trmeans)+0.5),
@@ -357,7 +333,6 @@ arrows(x0=c(c(1:ncol(trmeans))),x1=c(c(1:ncol(trmeans))),
        y1=unlist(trmeans[i,])+unlist(trse[i,]),
        length=0.05,angle=90,code=3,
        col="black")#c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
-#mtext(side=1,line=0.5,at=c(1:ncol(trmeans)),text=levels(as.factor(dataset[,group])),cex=1,las=label.direction)
 mtext(side=2,text=i,line=1.5,cex=0.75,font=3)
 axis(side=2,at=pretty(seq(0,max(unlist(trmeans[i,])),max(unlist(trmeans[i,]))/10)),
   labels=pretty(seq(0,max(unlist(trmeans[i,])),max(unlist(trmeans[i,]))/10),digits=2))
@@ -378,8 +353,8 @@ if(logtrans) dataset[,taxa] <- log(dataset[,taxa]+0.00001)
  
 if (box){
 if(pdf){
-pdf(width=picwidth, paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Boxplots.pdf", sep = ""))
-par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.2,0),mar=c(1,3.5,1,1),tck=-0.01,
+ pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Boxplots.pdf", sep = ""))
+  par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.2,0),mar=c(1,3.5,1,1),tck=-0.01,
     cex.axis=1.5,cex.lab=0.5)
 for(i in taxa) {
 boxplot(dataset[,i]~dataset[,group],ylab="",xlab="",outpch=21,axes=F, #las=label.direction,
@@ -391,12 +366,6 @@ outbg=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#98
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))])
-#outcol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-##boxcol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-#medcol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], 
-#whiskcol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], 
-#staplecol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))])
-#mtext(side=1,line=0,at=c(1:length(levels(as.factor(dataset[,group])))),text=levels(as.factor(dataset[,group])),cex=1,las=label.direction)
 mtext(side=2,text=i,line=1.5,cex=0.75,font=3)
 if(logtrans) { axis(side=2, at=log(c(0.00001,0.00005,0.0001,0.0005,0.001,0.005, 0.01, 0.05,0.1,0.5,1,5,10,50,100)), 
                     labels=c(0.00001,0.00005,0.0001,0.0005,0.001,0.005, 0.01, 0.05,0.1,0.5,1,5,10,50,100))
@@ -405,7 +374,6 @@ if(logtrans) { axis(side=2, at=log(c(0.00001,0.00005,0.0001,0.0005,0.001,0.005, 
 par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
-       #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
        fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
@@ -416,14 +384,13 @@ dev.off()
 #-------
 df = na.omit(reshape2::melt(dataset[,c(group,taxa)], id=c(group)))
 names(df)[1] <- c("group")
-pdf(width=picwidth, paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Boxplot.pdf", sep = ""))
+pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Boxplot.pdf", sep = ""))
 par(mar=c(20,4,3,3))
 boxplot((value)~paste(variable,group),
         data=df,las=2,col=c(1:length(levels(dataset[,group]))),#log="y",
         outpch=21,outbg=c(1:length(levels(dataset[,group]))),cex=0.5,
         yaxt="n",xaxt="n",
         ylab="Relative abundance (%)",
-       # boxwex=1/(length(levels(dataset[,group]))),
 at=rep(rank(colMeans(dataset[,taxa][order(taxa)]),ties.method = "first")*length(levels(dataset[,group])),
        each=length(levels(dataset[,group])))-c(sequence(length(levels(dataset[,group])))/2)-length(levels(dataset[,group]))/4)
 if(logtrans){ axis(side=2,at=log(c(0.0001,0.001,0.01,0.1,1,10,100)),
@@ -437,8 +404,6 @@ dev.off()
 #-------
 }
 
-  
-#quartz(width=picwidth2)
   quartz()
   par(mfcol=c(round(sqrt(length(taxa)+1)),round(sqrt(length(taxa)+1))+1),mgp=c(2,0.2,0),mar=c(1,3.5,1,1),tck=-0.01,
     cex.axis=1)
@@ -452,12 +417,6 @@ outbg=c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#98
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))])
-#outcol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-##boxcol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
-#medcol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], 
-#whiskcol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))], 
-#staplecol=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))])
-#mtext(side=1,line=0,at=c(1:length(levels(as.factor(dataset[,group])))),text=levels(as.factor(dataset[,group])),cex=1,las=label.direction)
 if(logtrans) { axis(side=2, at=log(c(0.00001,0.00005,0.0001,0.0005,0.001,0.005, 0.01, 0.05,0.1,0.5,1,5,10,50,100)), 
                     labels=c(0.00001,0.00005,0.0001,0.0005,0.001,0.005, 0.01, 0.05,0.1,0.5,1,5,10,50,100))
 } else axis(side=2)
@@ -465,7 +424,6 @@ mtext(side=2,text=i,line=1.5,cex=0.75,font=3)}
 par(mar=c(0,0,0,0))
 plot.new()
 legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])), 
-       #border= c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset[,group]))],
        fil = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
        'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
@@ -475,7 +433,7 @@ legend("topleft",bty="n", legend = levels(as.factor(dataset[,group])),
 #-------
 df = na.omit(reshape2::melt(dataset[,c(group,taxa)], id=c(group)))
 names(df)[1] <- c("group")
-#quartz(width=picwidth2)
+
   quartz()
   par(mar=c(20,4,3,3))
 boxplot((value)~paste(variable,group),
