@@ -38,8 +38,8 @@ GroupPlot <- function(taxa = NULL, group = NULL, taxonomic.table, meta, readcoun
  if(length(taxa)>10) {legsize = 1.5  } else legsize <- 2 
  
  
-# picwidth <- log(length(levels(as.factor(dataset[,group]))))*10
-#if(picwidth>10) picwidth2 = 10 else picwidth2 = picwidth
+picwidth <- log(length(levels(as.factor(dataset[,group]))))*10
+if(picwidth>10) picwidth2 = 10 else picwidth2 = picwidth
   
  palette(c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,'darkolivegreen2',"#984EA3","#FFFF33", 
        "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",

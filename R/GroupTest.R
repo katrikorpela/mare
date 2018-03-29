@@ -777,116 +777,10 @@ colnames(resids2)<-c(setdiff(colnames(resids),colnames(taxa)),setdiff(sig,sigNon
    sig <- unique(c(sig,sigNonzero))
    if(length(sig)>0){    
     
-library(metacoder)
-
-      
-        
-if(length(species.table)!=0){
-  sp <- colnames(species)
-} else{
- if(length(genus.table)!=0){
-   sp <- colnames(genus)
- } else{
-  if(length(family.table)!=0){
-    sp <- colnames(family)
-  } else{
-    if(length(order.table)!=0){
-      sp <- colnames(order)
-    } else{
-      if(length(class.table)!=0){
-        sp <- colnames(class)
-      } else sp <- colnames(phylum)
-    }
-  }
-}
-}
-
-
-   
-for(h in unique(dataset[,"G"])[unique(dataset[,"G"])!=compare.to & !is.na(unique(dataset[,"G"]))]){ 
-
-if(nonzero){  
-a <- group_test[!is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")])&group_test[,paste(h,"p",sep="_")]==group_test[,paste("nonzero",h,"p",sep="_")]|
-               !is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")])&group_test[,paste(h,"p",sep="_")]<group_test[,paste("nonzero",h,"p",sep="_")]|
-               !is.na(group_test[,paste(h,"p",sep="_")])&is.na(group_test[,paste("nonzero",h,"p",sep="_")]),c("taxon",paste(h,"estimate",sep="_"),paste(h,"p",sep="_"))]
-b <-  group_test[!is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")])&group_test[,paste(h,"p",sep="_")]>group_test[,paste("nonzero",h,"p",sep="_")]|
-               is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")]),c("taxon",paste("nonzero",h,"estimate",sep="_"),paste("nonzero",h,"p",sep="_"))]
-names(b) <- names(a)
-group_test_summary <- rbind(a,b)
-} else {
-group_test_summary <- group_test[!is.na(group_test[,paste(h,"p",sep="_")]),c("taxon",paste(h,"estimate",sep="_"),paste(h,"p",sep="_"))]
-}
-  
-group_test_summary$name <- sapply(group_test_summary$taxon, function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
-rownames(group_test_summary)<-  group_test_summary$taxon
-group_test_summary[,paste(h,"estimate",sep="_")][group_test_summary[,paste(h,"p",sep="_")] > p.cutoff] <- 0
-group_test_summary2 <- group_test_summary[intersect(sp,rownames(group_test_summary)),]
-  
-seqs1 <- list()
-for(i in rownames(group_test_summary2)){
-  if(!is.na(group_test_summary2[i,paste(h,"p",sep="_")]))  if(group_test_summary2[i,paste(h,"p",sep="_")]<p.cutoff)  seqs1[[group_test_summary2[i,"taxon"]]]<- group_test_summary2[i,paste(h,"estimate",sep="_")]
-}
-
-for(i in rownames(group_test_summary2)){
-  if(!is.na(group_test_summary2[i,paste(h,"p",sep="_")]))  if(group_test_summary2[i,paste(h,"p",sep="_")]>p.cutoff) seqs1[[group_test_summary2[i,"taxon"]]]<- 0
-}
-
-abu <- list()
-for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
-
- if(length(intersect(colnames(phylum),sp))==length(sp)){newseqs2 <- paste("XX ", names(seqs1)," ",seqs1," ", abu, sep="")
- } else newseqs2 <- paste("XX Bacteria_", names(seqs1)," ",seqs1," ", abu, sep="")
-
-tmp2 <- extract_taxonomy(input=newseqs2, regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
-                         key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_")
-
-for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)&tmp2$taxon_data$name!="NA"]){
-if(tmp2$taxon_data$name[as.numeric(k)]%in%group_test_summary$name) tmp2$taxon_data$taxon_info_1[as.numeric(k)] <- group_test_summary[group_test_summary$name==tmp2$taxon_data$name[as.numeric(k)],paste(h,"estimate",sep="_")][1]
-}
-for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)])){
- tmp2$taxon_data$taxon_info_1[as.numeric(k)] <-  mean(as.numeric(tmp2$taxon_data$taxon_info_1[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
-}
-tmp2$taxon_data$taxon_info_1[tmp2$taxon_data$name=="Bacteria"] <- 0
-
-treltaxa <- as.data.frame(t(reltaxa))
-treltaxa$name <-  sapply(rownames(treltaxa), function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
-
-for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)]){
-if(tmp2$taxon_data$name[as.numeric(k)]%in%treltaxa$name) tmp2$taxon_data$taxon_info_2[as.numeric(k)] <- rowMeans(treltaxa[treltaxa$name==tmp2$taxon_data$name[as.numeric(k)],-ncol(treltaxa)][1,])
-}
-
-
-for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)])){
- tmp2$taxon_data$taxon_info_2[as.numeric(k)] <-  sum(as.numeric(tmp2$taxon_data$taxon_info_2[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
-}
-
-heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100, 
-                   node_label = ifelse(name == "NA", NA, name),
-                   node_color = as.numeric(taxon_info_1),
-                   node_color_range=c("#377EB8","gray95","red"),
-                   node_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
-                   edge_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
-                   node_color_axis_label = paste("Group",h,"compared to",compare.to),
-                   node_size_axis_label = "Average relative abundance (%)",
-          node_label_size_range=c(0.01,0.015),
-          node_label_size_trans="ln",
-          initial_layout = "reingold-tilford",
-          layout = "davidson-harel",
-          overlap_avoidance = 1, node_label_max=150, make_legend=T, 
-          node_size_trans="linear",
-          node_size_range=c(0.01,0.04),
-          node_color_trans="linear",
-          title=paste("Differences between groups", h, "and", compare.to), title_size=0.03,
-          output_file=paste(group,h,"vs", compare.to, "_", select.by, select,"_HeatTree.pdf",sep=""))
-
-
-
-}
 #------------
   if (length(sig) > 1) {  sig <-  na.omit(sig[apply(dataset2[,sig],MARGIN=2,FUN=sum,na.rm=T)!=0])}
    
     
-    if (length(sig) > 0) {
         if (pdf) {
             pdf(paste(group, compare.to, "_", select.by, select, "_Boxplot.pdf", sep = ""))
             par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 
@@ -1022,7 +916,114 @@ heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100,
                  if(length(confounders[confounders!=""])==0) { axis(side=2,at=yaxis,labels=signif(exp(yaxis),digits=1))
               } else  axis(side=2)
         } 
-   }
+    
+     
+     library(metacoder)
+
+if(length(species.table)!=0){
+  sp <- colnames(species)
+} else{
+ if(length(genus.table)!=0){
+   sp <- colnames(genus)
+ } else{
+  if(length(family.table)!=0){
+    sp <- colnames(family)
+  } else{
+    if(length(order.table)!=0){
+      sp <- colnames(order)
+    } else{
+      if(length(class.table)!=0){
+        sp <- colnames(class)
+      } else sp <- colnames(phylum)
+    }
+  }
+}
+}
+
+
+   
+for(h in unique(dataset[,"G"])[unique(dataset[,"G"])!=compare.to & !is.na(unique(dataset[,"G"]))]){ 
+
+if(nonzero){  
+a <- group_test[!is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")])&group_test[,paste(h,"p",sep="_")]==group_test[,paste("nonzero",h,"p",sep="_")]|
+               !is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")])&group_test[,paste(h,"p",sep="_")]<group_test[,paste("nonzero",h,"p",sep="_")]|
+               !is.na(group_test[,paste(h,"p",sep="_")])&is.na(group_test[,paste("nonzero",h,"p",sep="_")]),c("taxon",paste(h,"estimate",sep="_"),paste(h,"p",sep="_"))]
+b <-  group_test[!is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")])&group_test[,paste(h,"p",sep="_")]>group_test[,paste("nonzero",h,"p",sep="_")]|
+               is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")]),c("taxon",paste("nonzero",h,"estimate",sep="_"),paste("nonzero",h,"p",sep="_"))]
+names(b) <- names(a)
+group_test_summary <- rbind(a,b)
+} else {
+group_test_summary <- group_test[!is.na(group_test[,paste(h,"p",sep="_")]),c("taxon",paste(h,"estimate",sep="_"),paste(h,"p",sep="_"))]
+}
+  
+group_test_summary$name <- sapply(group_test_summary$taxon, function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
+rownames(group_test_summary)<-  group_test_summary$taxon
+group_test_summary[,paste(h,"estimate",sep="_")][group_test_summary[,paste(h,"p",sep="_")] > p.cutoff] <- 0
+group_test_summary2 <- group_test_summary[intersect(sp,rownames(group_test_summary)),]
+  
+seqs1 <- list()
+for(i in rownames(group_test_summary2)){
+  if(!is.na(group_test_summary2[i,paste(h,"p",sep="_")]))  if(group_test_summary2[i,paste(h,"p",sep="_")]<p.cutoff)  seqs1[[group_test_summary2[i,"taxon"]]]<- group_test_summary2[i,paste(h,"estimate",sep="_")]
+}
+
+for(i in rownames(group_test_summary2)){
+  if(!is.na(group_test_summary2[i,paste(h,"p",sep="_")]))  if(group_test_summary2[i,paste(h,"p",sep="_")]>p.cutoff) seqs1[[group_test_summary2[i,"taxon"]]]<- 0
+}
+
+abu <- list()
+for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
+
+ if(length(intersect(colnames(phylum),sp))==length(sp)){newseqs2 <- paste("XX ", names(seqs1)," ",seqs1," ", abu, sep="")
+ } else newseqs2 <- paste("XX Bacteria_", names(seqs1)," ",seqs1," ", abu, sep="")
+
+tmp2 <- tryCatch(extract_taxonomy(input=newseqs2, regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
+                         key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_"),error = function(e) NULL)
+
+for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)&tmp2$taxon_data$name!="NA"]){
+if(tmp2$taxon_data$name[as.numeric(k)]%in%group_test_summary$name) tmp2$taxon_data$taxon_info_1[as.numeric(k)] <- group_test_summary[group_test_summary$name==tmp2$taxon_data$name[as.numeric(k)],paste(h,"estimate",sep="_")][1]
+}
+for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)])){
+ tmp2$taxon_data$taxon_info_1[as.numeric(k)] <-  mean(as.numeric(tmp2$taxon_data$taxon_info_1[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
+}
+tmp2$taxon_data$taxon_info_1[tmp2$taxon_data$name=="Bacteria"] <- 0
+
+treltaxa <- as.data.frame(t(reltaxa))
+treltaxa$name <-  sapply(rownames(treltaxa), function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
+
+for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)]){
+if(tmp2$taxon_data$name[as.numeric(k)]%in%treltaxa$name) tmp2$taxon_data$taxon_info_2[as.numeric(k)] <- rowMeans(treltaxa[treltaxa$name==tmp2$taxon_data$name[as.numeric(k)],-ncol(treltaxa)][1,])
+}
+
+
+for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)])){
+ tmp2$taxon_data$taxon_info_2[as.numeric(k)] <-  sum(as.numeric(tmp2$taxon_data$taxon_info_2[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
+}
+
+heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*100, 
+                   node_label = ifelse(name == "NA", NA, name),
+                   node_color = as.numeric(taxon_info_1),
+                   node_color_range=c("#377EB8","gray95","red"),
+                   node_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   edge_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
+                   node_color_axis_label = paste("Group",h,"compared to",compare.to),
+                   node_size_axis_label = "Average relative abundance (%)",
+          node_label_size_range=c(0.01,0.015),
+          node_label_size_trans="ln",
+          initial_layout = "reingold-tilford",
+          layout = "davidson-harel",
+          overlap_avoidance = 1, node_label_max=150, make_legend=T, 
+          node_size_trans="linear",
+          node_size_range=c(0.01,0.04),
+          node_color_trans="linear",
+          title=paste("Differences between groups", h, "and", compare.to), title_size=0.03,
+          output_file=paste(group,h,"vs", compare.to, "_", select.by, select,"_HeatTree.pdf",sep=""))
+
+
+
+}
+
+     
+     
     } 
    if(keep.result)   return(group_test)
 
