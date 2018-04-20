@@ -176,7 +176,7 @@ ProcessReads <- function(forward.reads = NULL,
         message("No names attribute found in dnaSet object...", "using artifically generated names")
         names(dnaSet) <- paste("read", 1:length(dnaSet), sep = "-")
     }
-    dnaSet <- dnaSet[order(dnaSet)]#tämä tarvitaan??!
+    dnaSet <- suppressWarnings(dnaSet[BiocGenerics::order(dnaSet)])
     counts <- BiocGenerics::table(dnaSet)
     dnaSet <- unique(dnaSet)
     names(dnaSet) <- paste0(paste("read", 1:length(names(dnaSet)), sep = "_"), 
