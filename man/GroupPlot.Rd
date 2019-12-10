@@ -10,7 +10,8 @@ The function prints five different plots to visualise group differences in selec
 \usage{
 GroupPlot(taxa = NULL, group = NULL, taxonomic.table, meta, readcount.cutoff = 0, 
          stacked = T, bar = T, box = T, bean = T, covariate = NULL, 
-         smooth.method ='loess',select.by = NULL, select = NULL, pdf = F, label.direction = 1, logtrans = F)
+         smooth.method ='loess',select.by = NULL, select = NULL, pdf = F, label.direction = 1, logtrans = F,
+         relative = T)
 }
 \arguments{
   \item{taxa}{
@@ -55,14 +56,15 @@ Determines which value on the selection variable will be selected.
   \item{pdf}{
 Should the figures be printed as pdf? If yes, specify TRUE.
 }
-  \item{quartz}{
-Plot the figure into a quartz device (default). If your OS does not support quartz, set to FALSE.
-}
+
   \item{label.direction}{
 Direction of the x-axis labels: 1 = horizontal,  2 = vertical.
 }
-  \item{log.trans}{
-Log-transform data relative abundances for boxplots? TRUE or FALSE, default is FALSE.
+  \item{logtrans}{
+Log-transform data for boxplots? TRUE or FALSE, default is FALSE.
+}
+  \item{relative}{
+Plot relative abundances? Default is TRUE. FALSE will plot data as is.
 }
 }
 

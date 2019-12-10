@@ -7,25 +7,16 @@ Pre-processing of raw 16S amplicon sequences
 The function performs preprocessing of 16S sequences using USEARCH version 8: trimming of primer sequences, paired-end read merging or pooling, read truncation to set length, quality filtering, chimera filtering, dereplication, and OTU clustering.
 }
 \usage{
-ProcessReads(forward.reads = list.files(pattern = "_R1_"), 
-             reverse.reads = list.files(pattern = "_R2_"), 
-             name.separator = "_", 
-             usearch.path, 
-             forward.primer = NULL, 
-             reverse.primer = NULL,
-             trim.beginning = 0, 
-             merge = F, 
-             min.merged.length = NULL, 
-             min.overlap = NULL, 
-             max.mismatches = NULL, 
-             pool = F, 
-             truncate = T, 
-             filter = T, 
-             trunc.quality = 2, 
-             max.expected.error = 1, 
-             readlength = NULL, 
-             min.read.abundance = 0.00001, 
-             folder.name = "")
+ProcessReads(forward.reads = NULL, 
+                         reverse.reads = NULL, 
+                         name.separator = "_", 
+    usearch.path, forward.primer = NULL, reverse.primer = NULL,
+    trim.beginning = 0, merge = F, 
+    min.merged.length = NULL, min.overlap = NULL, max.mismatches = NULL, 
+    pool = F, truncate = T, 
+    filter = T, trunc.quality = 2, max.expected.error = 1, 
+    readlength = NULL, min.read.abundance = 0.00001, folder.name = "",
+    negative.controls = NULL)
 }
 
 \arguments{
@@ -88,6 +79,9 @@ Minimum acceptable relative abundance of a unique read in the whole data set. Re
 }
   \item{folder.name}{
 Name for the new folder where the processed reads are written. 
+}
+  \item{negative.controls}{
+Names of possible negative control samples. The reads occurring in these samples will be removed from the dataset in accordance with how often they occur in the negative controls. 
 }
 }
 

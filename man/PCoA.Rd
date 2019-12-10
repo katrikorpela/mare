@@ -8,9 +8,10 @@ The function conducts principal coordinates analysis using Bray-Curtis dissimila
 }
 \usage{
 PCoA(taxonomic.table, meta, readcount.cutoff = 0, group = NULL, group2 = NULL,
-    components = c(1, 2), background.variable = NULL, colour.scheme = terrain.colors, 
+    components = c(1, 2), background.variable = NULL, colour.scheme = "terrain.colors", 
     ellipse = F, hull = F, spider = F, legendplace = "topright", 
-    select.by = NULL, select = NULL, relative = F, pdf = F, keep.result = F)
+    select.by = NULL, select = NULL, relative = F, pdf = F, keep.result = F,
+    subjectID = NULL, time = NULL, distance = "bray", constrain = NULL)
 }
 
 \arguments{
@@ -36,7 +37,7 @@ Which principal components should be shown? Defaults to the first two components
 Name of the continuous variable from the metadata file or a bacterial taxon to be shown as the background colour.
 }
   \item{colour.scheme}{
-Backround colour scheme. Must be one of the following:  terrain.colors (default), heat.colors,topo.colors, or cm.colors. Do NOT put the colour.scheme in quotes!
+Backround colour scheme. Can be a vector of colour codes or names, or pre-specified colour scheme such as "terrain.colors" (default), "heat.colors","topo.colors", or "cm.colors". NOTE: These must be in quotes!
 }
   \item{ellipse}{
 Draw standard deviation ellipse for each group using function ordiellipse from package vegan.
@@ -64,6 +65,18 @@ Should the figure be saved as pdf? If yes, specify TRUE.
 }
 \item{keep.result}{
 Should the PC-component scores be returned? If yes, specify TRUE.
+}
+\item{subjectID}{
+Column name for subject ID in the metadata file, if several samples from the same subjects are present and should be linked in the plot.
+}
+\item{time}{
+Column name for time/order variable in the metadata file, if several samples from the same subjects are present and should be linked in the plot.
+}
+\item{distance}{
+Use Bray-Curtis distance ("bray"), Pearson correlation distance ("pearson"), Euclidean distance ("euc").
+}
+\item{constrain}{
+To constrain the first principal component to be a specified variable, specify a variable name.
 }
 }
 
