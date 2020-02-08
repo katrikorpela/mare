@@ -1,8 +1,9 @@
 PathModel <- function(taxonomic.table, meta, response = NULL, 
-                      binomial.response = F, count.response = F, variables, readcount.cutoff = 0, 
+                      binomial.response = F, count.response = F, variables = NULL, readcount.cutoff = 0, 
                       outlier.cutoff = 3, 
                       select.by = NULL, select = NULL, pdf = F, 
-                      min.prevalence = 0, min.abundance = 0, keep.result = F) {
+                      min.prevalence = 0, min.abundance = 0, keep.result = F, relative = T, k.value = 3.5,
+                      logtrans = F) {
   
     if(Sys.info()[['sysname']] == "Linux") {
   quartz <- function() {X11()}
@@ -12,7 +13,9 @@ PathModel <- function(taxonomic.table, meta, response = NULL,
 }
 
     metadata <- read.delim(meta)
+    if(!relative) metadata[,"ReadCount"]<-1
     taxa <- read.delim(taxonomic.table)
+    if(logtrans) taxa <- log(taxa + min(taxa[taxa>0],na.rm=T))
     colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))])
     taxa <- taxa[, colSums(taxa/rowSums(taxa) > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
 
@@ -21,7 +24,7 @@ PathModel <- function(taxonomic.table, meta, response = NULL,
       
     taxa <- taxa[metadata$ReadCount > readcount.cutoff, ]
     metadata <- metadata[metadata$ReadCount > readcount.cutoff, ]
-    background.variables <- names(metadata[,variables])
+   if(length(variables)>1) background.variables <- names(metadata[,variables]) else background.variables <- variables
     
     if (length(select.by) != 0) {
         metadata$selection <- metadata[, select.by]
@@ -39,7 +42,7 @@ PathModel <- function(taxonomic.table, meta, response = NULL,
     }
     
     dataset <- data.frame(metadata, reltaxa)
-    
+   
     taxa <- round(reltaxa * metadata$ReadCount - 1)
     taxa[taxa<0]<-0
     dataset2 <- data.frame(metadata, taxa)
@@ -100,11 +103,11 @@ PathModel <- function(taxonomic.table, meta, response = NULL,
     if (length(sig) > 1) sig2 <- paste(sig[1],sig[2],sep=" + ") else sig2 <- sig
     if (length(sig) > 2) for(i in 3:length(sig)) sig2 <-  paste(sig2,sig[i],sep=" + ")
     if(binomial.response){
- combmodel <- step(glm(as.formula(paste(response, "~",sig2)), data = modeldata, family="binomial"),k=3.5)
+ combmodel <- step(glm(as.formula(paste(response, "~",sig2)), data = modeldata, family="binomial"),k=k.value)
     } else if(count.response){
-      combmodel <- step(MASS::glm.nb(as.formula(paste(response, "~",sig2)), data = modeldata),k=3.5)
+      combmodel <- step(MASS::glm.nb(as.formula(paste(response, "~",sig2)), data = modeldata),k=k.value)
     } else {
-      combmodel <- step(lm(as.formula(paste(response, "~",sig2)), data = modeldata),k=3.5)
+      combmodel <- step(lm(as.formula(paste(response, "~",sig2)), data = modeldata),k=k.value)
     }
     
     
@@ -173,7 +176,7 @@ PathModel <- function(taxonomic.table, meta, response = NULL,
     }
     }
   
-    } else print("Model fit could not be found. Try adding/removing back.ground variables.")
+    } else print("Model fit could not be found. Try adding/removing background variables.")
 }
     } else {
   sigbac <- colnames(taxa)
@@ -214,7 +217,7 @@ PathModel <- function(taxonomic.table, meta, response = NULL,
     if (length(sigi) > 2) for(h in 3:length(sigi)) sigi2 <-  paste(sigi2,sigi[h],sep=" + ")
     
     combbacmodel[[i]] <- tryCatch(MASS::stepAIC(MASS::glm.nb(as.formula(paste(i, "~",sigi2, "+ offset(log(ReadCount))")),
-                                                             data = modeldata2),k=3.5),
+                                                             data = modeldata2),k=k.value),
                                    error = function(e) NULL)
     if (length(combbacmodel[[i]])==0){
             combbacmodel[[i]] <- tryCatch(lm(as.formula(paste("log((",i, "+1)/ReadCount)~",sigi2)),
@@ -234,31 +237,35 @@ PathModel <- function(taxonomic.table, meta, response = NULL,
     }  
   
   
-    result <- matrix(nrow=length(c(response,sigbac,background.variables)),
+    
+   
+   result <- matrix(nrow=length(c(response,sigbac,background.variables)),
                      ncol=length(c(response,sigbac,background.variables)))
     rownames(result) <- c(response,sigbac,background.variables)
     colnames(result) <- c(response,sigbac,background.variables)
 
     if(length(combmodel)>0 ){
-    if(length(response)>0){
-      
+      if(length(response)>0){
 result[names(combmodel$coefficients)[-1],response] <- combmodel$coef[-1]        
    }   
+
     }
     
     
   
     
-if(length(combbacmodel)>0 ){      
+if(length(combbacmodel)>0 ){ 
  if(length(sigbac)>0){
    for(i in sigbac){
    result[names(combbacmodel[[i]]$coefficients[-1]),i] <-  combbacmodel[[i]]$coefficients[-1] 
 
     }
  }
-}   
+
+} 
     
-res <- result[unique(c(rownames(result)[rowSums(result,na.rm=T)!=0],colnames(result)[colSums(result,na.rm=T)!=0])),
+      
+    res <- result[unique(c(rownames(result)[rowSums(result,na.rm=T)!=0],colnames(result)[colSums(result,na.rm=T)!=0])),
                unique(c(rownames(result)[rowSums(result,na.rm=T)!=0],colnames(result)[colSums(result,na.rm=T)!=0]))] 
 
   
@@ -278,25 +285,33 @@ color <- as.numeric(ordered(unlist(class)))
 curves <- res
 curves[!is.na(curves)]<-0.25
 
+alpha = floor(255*0.5)  
 if (length(response)>0) {
-palette(c("gray","white", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
-       "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
-       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
-       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4'))
-} else {
-palette(c("gray", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
-       "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
-       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
-       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4'))
-  
+newColor = col2rgb(col=c("gray90","black","#E41A1C","#FFA500","#377EB8","#87CEFA","#4DAF4A" ,'#9ACD32',"#984EA3",'#DA70D6', "#999999","gainsboro",
+      "#008080","#00CED1","#F781BF","thistle1","#8DA0CB","lightsteelblue1","#FFD92F","#FFFFB3",
+"#8DD3C7","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD",
+"#CCEBC5","#FFED6F","#C71585","#EE82EE","#66C2A5","#FC8D62","#A65628"), alpha=FALSE)
+} else{
+newColor = col2rgb(col=c("gray90","#E41A1C","#FFA500","#377EB8","#87CEFA","#4DAF4A" ,'#9ACD32',"#984EA3",'#DA70D6', "#999999","gainsboro",
+      "#008080","#00CED1","#F781BF","thistle1","#8DA0CB","lightsteelblue1","#FFD92F","#FFFFB3",
+"#8DD3C7","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD",
+"#CCEBC5","#FFED6F","#C71585","#EE82EE","#66C2A5","#FC8D62","#A65628"), alpha=FALSE)
 }
+ makeTransparent = function(col, alpha) {
+    rgb(red=col[1], green=col[2], blue=col[3], alpha=alpha, maxColorValue=255)
+  }
+  newCol = apply(newColor, 2, makeTransparent, alpha=alpha)
+  palette(newCol)
 
+  
 if(pdf) {
   pdf(paste("PathModel_",select.by,select,"_",response,".pdf",sep=""))
-qgraph::qgraph(input=res,asize=5,vsize=10,esize=10,directed=T,colFactor=0,arrowAngle=0.6,
+qgraph::qgraph(input=res,asize=5,vsize=8,esize=10,directed=T,colFactor=0,arrowAngle=0.6,
            labels=substr(namesres,start=1,stop=15),groups=class,color=color,legend=F,
-           curve.all=T,borders=F,negCol = "red",posCol="yellowgreen",
-           edge.label.cex=1,edge.labels=F)
+          curveShape=-0.5,curveScale=T,
+          curve=curves, 
+          edge.label.cex=1,edge.labels=F, 
+          borders=F,negCol = "red",posCol="yellowgreen")
 dev.off()
 }
 quartz()

@@ -74,9 +74,15 @@ p<- ggplot2::ggplot(df, ggplot2::aes(y=value, x=x,color=factor(gr)),environment 
   ggplot2::theme_bw()+
   ggplot2::xlab(covariate)+
   ggplot2::ylab(ylabel)+
-  ggplot2::theme(legend.position=legpos)+
-  ggplot2::scale_color_manual(name=group,values=c('royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(levels(factor(df[,'gr'])))])+ 
-  ggplot2::scale_fill_manual(name=group,values=c('skyblue','yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray')[1:length(levels(factor(df[,'gr'])))])
+  ggplot2::theme(legend.position=legpos,
+                 axis.line = ggplot2::element_line(colour = "black"),
+                         panel.border = ggplot2::element_blank(),
+                         panel.grid.major = ggplot2::element_blank(), 
+                         panel.grid.minor = ggplot2::element_blank(),
+                         strip.background =  ggplot2::element_rect(color = "white",fill="white"))+
+  ggplot2::scale_color_manual(name=group,values=c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",'gray30','red','turquoise4','olivedrab4','purple','darkorange3','lightyellow4','black')[1:length(levels(factor(df[,'gr'])))])+ 
+  ggplot2::scale_fill_manual(name=group,values=c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7",'cornflowerblue','pink','turquoise2','yellowgreen','plum','darkorange','lightyellow','gray')[1:length(levels(factor(df[,'gr'])))])
+
 
 if(pdf){
 pdf(paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",covariate,"_",group, "_", select.by,select, "_", "Covariateplot.pdf", sep = ""));

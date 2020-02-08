@@ -1,5 +1,5 @@
 CovariatePlot <- function(meta, taxonomic.table, covariate, taxa=NULL, smooth.method = "loess", 
-    readcount.cutoff = 0, select.by = NULL, select = NULL, pdf = F, logtrans = F, nozeros = F) {
+    readcount.cutoff = 0, select.by = NULL, select = NULL, pdf = F, logtrans = F, nozeros = F, relative = T) {
 
    if(Sys.info()[['sysname']] == "Linux") {
   quartz <- function() {X11()}
@@ -9,6 +9,7 @@ CovariatePlot <- function(meta, taxonomic.table, covariate, taxa=NULL, smooth.me
 }
    
     meta <- read.delim(meta)
+    if(!relative) meta[,"ReadCount"]<-1
     taxatable <- read.delim(taxonomic.table)
    
     names(taxatable) <- sapply(names(taxatable), function(x) gsub("_NA", ".", x))
@@ -28,7 +29,7 @@ CovariatePlot <- function(meta, taxonomic.table, covariate, taxa=NULL, smooth.me
     }
     dataset <- dataset[dataset$ReadCount > readcount.cutoff, ]
     
-    
+   if(relative) lab <- "Relative abundance (%)" else lab <- "Abundance" 
     
     df = na.omit(reshape2::melt(dataset[, c(covariate, taxa)], id = c(covariate)))
     names(df) <- c("x", "variable", "value")
@@ -37,10 +38,14 @@ CovariatePlot <- function(meta, taxonomic.table, covariate, taxa=NULL, smooth.me
           ggplot2::geom_point(pch=20,color="gray30")+
           ggplot2::facet_wrap(~variable, ncol = floor(sqrt(length(taxa))), scales = "free") + 
           ggplot2::theme_bw() + 
+          ggplot2::theme(axis.line = ggplot2::element_line(colour = "black"),
+                         panel.border = ggplot2::element_blank(),
+                         panel.grid.major = ggplot2::element_blank(), 
+                         panel.grid.minor = ggplot2::element_blank(),
+                         strip.background =  ggplot2::element_rect(color = "white",fill="white"))+
           ggplot2::xlab(covariate) + 
-          ggplot2::ylab("Relative abundance (%)") + 
-          ggplot2::theme(legend.position = "none",strip.background =  ggplot2::element_rect(color = "white",fill="white"))
-          
+          ggplot2::ylab(lab) 
+         
  quartz()
     plot(p)
     

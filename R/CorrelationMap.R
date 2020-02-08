@@ -1,6 +1,6 @@
 CorrelationMap <- function(taxonomic.table, meta, variables, select.by = NULL, 
                            selection = NULL,  outlier.cutoff = 3, readcount.cutoff = 0, 
-                           min.abundance = 0, min.prevalence = 0, pdf = F){
+                           min.abundance = 0, min.prevalence = 0, pdf = F, relative = T, logtrans = T){
 if(Sys.info()[['sysname']] == "Linux") {
   quartz <- function() {X11()}
   }
@@ -24,19 +24,17 @@ if (length(select.by) != 0) {
         metadata <- metadata[metadata[, select.by] == selection, ]
     }
     
-reltaxa <- (1 + taxa)/metadata$ReadCount
+if(relative) reltaxa <- (1 + taxa)/metadata$ReadCount else reltaxa <- taxa + 1
+
 for (i in names(reltaxa)) {
     for (j in 1:nrow(taxa)) {
-         reltaxa[j, i][reltaxa[j, i] > (mean(reltaxa[, i]) + outlier.cutoff * 
-                sd(reltaxa[, i]))] <- mean(reltaxa[, i]) + outlier.cutoff * 
-                sd(reltaxa[, i])
+         reltaxa[j, i][reltaxa[j, i] > (mean(reltaxa[, i]) + outlier.cutoff * sd(reltaxa[, i]))] <- mean(reltaxa[, i]) + outlier.cutoff * sd(reltaxa[, i])
         }
 }
 
 spnames <- names(reltaxa)
 
 classnamesN <- rep(1,length(spnames))
-#if (length(strsplit(names(reltaxa)[1], split = "_", fixed = T)[[1]])>1){
 if (taxonomic.table!="CAZy_table.txt"){classnames <- sapply(spnames, function(x) strsplit(x, split = "_", fixed = T)[[1]][1])
 } else { classnames <- sapply(spnames, function(x) substr(x, start = 1, stop=2)[[1]][1])}
    classes <- levels(as.factor(classnames))
@@ -57,13 +55,12 @@ spnames <- sapply(spnames, function(x) strsplit(x, split = "_",
 names(reltaxa) <- spnames
 metadata <- metadata[,variables]
  
-palette(c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
-       "#A65628", "#F781BF", "#999999","blue","firebrick4",
-       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
-       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black'))
+if(logtrans) reltaxa <- log(reltaxa)
+
 n<-nrow(reltaxa)
 df<-n-2
-correl <- cor(log(reltaxa+0.000001),metadata,use="pairwise.complete.obs")[,colSums(abs(cor(log(reltaxa+0.000001),metadata,use="pairwise.complete.obs")),na.rm=T)>0]
+correl <- cor(reltaxa,metadata,use="pairwise.complete.obs")[,colSums(abs(cor(reltaxa,metadata,use="pairwise.complete.obs")),na.rm=T)>0]
+correl[is.na(correl)]<-0
 pt2 <- function(q,df,log.p=F) 2*pt(-abs(q),df,log.p=log.p)
 tstat<-correl*sqrt((n-2)/(1-correl^2))
 correl.p<-pt2(tstat,df)
@@ -73,17 +70,24 @@ correl.sym[correl.p<0.01&correl.p>0.000999999]<-"**"
 correl.sym[correl.p<0.001]<-"***"
 correl.sym[correl.p>0.05]<-""
 
+palette(c("#E41A1C","#FFA500","#377EB8","#87CEFA","#4DAF4A" ,'#9ACD32',"#984EA3",'#DA70D6', "#999999","gainsboro",
+      "#008080","#00CED1","#F781BF","thistle1","#8DA0CB","lightsteelblue1","#FFD92F","#FFFFB3",
+"#8DD3C7","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD",
+"#CCEBC5","#FFED6F","#C71585","#EE82EE","#66C2A5","#FC8D62","#A65628"))
+
 
 if (pdf){
-pdf(paste("CorrelationMap_",select.by,select,sep="",".pdf"))
-gplots::heatmap.2(correl, col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
+pdf(paste("CorrelationMap_",select.by,select,".pdf",sep=""))
+gplots::heatmap.2(correl, col=c("#053061", "#2166AC", "#4393C3", "#92C5DE", "#D1E5F0", "#F7F7F7", "#FDDBC7", "#F4A582", "#D6604D", "#B2182B", "#67001F"),#rainbow(256, start=0,end=0.34),
+                  density.info = "none",trace="none",
                   RowSideColors=classnamesN,
          cellnote=correl.sym,notecol = "black", keysize=1,key.xlab = "Correlation",margins=c(10,10),
          colRow=as.numeric(classnamesN))
 dev.off()
 }
 quartz();par(mar=c(2,2,2,5)) 
-gplots::heatmap.2(correl, col=rainbow(256, start=0,end=0.34),density.info = "none",trace="none",
+gplots::heatmap.2(correl, col=c("#053061", "#2166AC", "#4393C3", "#92C5DE", "#D1E5F0", "#F7F7F7", "#FDDBC7", "#F4A582", "#D6604D", "#B2182B", "#67001F"),#rainbow(256, start=0,end=0.34),
+                  density.info = "none",trace="none",
                   RowSideColors=classnamesN,
          cellnote=correl.sym,notecol = "black", keysize=1,key.xlab = "Correlation",margins=c(10,10),
          colRow=as.numeric(classnamesN))

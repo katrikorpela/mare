@@ -1,6 +1,6 @@
 Clusters <- function(taxonomic.table, meta, N.taxa = NULL,  readcount.cutoff = 0,
                      minimum.correlation = 0.5, minimum.network = 1,
-                      select.by = NULL, select = NULL, keep.result = F, pdf = F){
+                      select.by = NULL, select = NULL, keep.result = F, pdf = F, relative = T){
 if(Sys.info()[['sysname']] == "Linux") {
   quartz <- function() {X11()}
   }
@@ -12,7 +12,7 @@ cluster.similarity = 1-minimum.correlation
 
 taxatable <- read.delim(taxonomic.table)
 metadata <- read.delim(meta)
-taxatable <- taxatable/metadata$ReadCount
+if(relative) taxatable <- taxatable/metadata$ReadCount
 taxatable <- taxatable[metadata$ReadCount > readcount.cutoff, ]
 
 if (length(select.by) != 0) {
@@ -30,7 +30,7 @@ g2.cor[is.na(g2.cor)] <- 0
 
 g2.cor2 <- g2.cor
 g2.cor2[abs(g2.cor2)<minimum.correlation] <- 0 
-g2.cor2 <- g2.cor2[vegan::specnumber(g2.cor2)>minimum.network,vegan::specnumber(g2.cor2)>minimum.network]
+g2.cor2 <- g2.cor2[rowSums(abs(g2.cor2)>0)>minimum.network,rowSums(abs(g2.cor2)>0)>minimum.network]
 
 spnames1 <- rownames(g2.cor)
 spnames1 <- sapply(spnames1, function(x) gsub("_NA", ".", x))
@@ -67,10 +67,10 @@ qgraph::qgraph(g2.cor2,vsize=5,rescale=T,repulsion=0.8,
                layout="spring",diag=F,
        legend.cex=0.5,
        groups=classnames,
-       color=c("gray","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FFFF33", 
-       "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
-       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
-       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4')[1:length(unique(classnames))],
+       color=c("#E41A1C","#FFA500","#377EB8","#87CEFA","#4DAF4A" ,'#9ACD32',"#984EA3",'#DA70D6', "#999999","gainsboro",
+      "#008080","#00CED1","#F781BF","thistle1","#8DA0CB","lightsteelblue1","#FFD92F","#FFFFB3",
+"#8DD3C7","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD",
+"#CCEBC5","#FFED6F","#C71585","#EE82EE","#66C2A5","#FC8D62","#A65628")[1:length(unique(classnames))],
        label.prop=0.99)
 mtext(side=3,text="Correlations",line=2)
 
@@ -83,14 +83,15 @@ abline(h=cluster.similarity, lty=2, col="gray")
 
 quartz()
 qgraph::qgraph(g2.cor2,vsize=5,rescale=T,repulsion=0.8,
-          labels=substr(spnames,start=1,stop=6),layout="spring",diag=F,
-       legend.cex=0.5,label.prop=0.99,borders=F, negCol = "red",posCol="yellowgreen",
+               labels=substr(spnames,start=1,stop=4),
+               layout="spring",diag=F,
+       legend.cex=0.5,
        groups=classnames,
-       color=c("gray","#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3","#FFFF33", 
-       "#A65628", "#F781BF", "#999999","dodgerblue","firebrick4",
-       'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
-       'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4')[1:length(unique(classnames))])
-mtext(side=3,text="Correlations",line=2)
+       color=c("#E41A1C","#FFA500","#377EB8","#87CEFA","#4DAF4A" ,'#9ACD32',"#984EA3",'#DA70D6', "#999999","gainsboro",
+      "#008080","#00CED1","#F781BF","thistle1","#8DA0CB","lightsteelblue1","#FFD92F","#FFFFB3",
+"#8DD3C7","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD",
+"#CCEBC5","#FFED6F","#C71585","#EE82EE","#66C2A5","#FC8D62","#A65628")[1:length(unique(classnames))],
+       label.prop=0.99)
 
 networks <- data.frame(metadata,taxatable)
 for(i in names(table(clus)[table(clus)>1])) networks[,paste('cluster',i,sep="")] <- rowSums(networks[, names(clus)[clus==i]],na.rm=T)
