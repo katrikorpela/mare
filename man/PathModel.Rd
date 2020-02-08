@@ -12,7 +12,8 @@ PathModel(taxonomic.table, meta, response = NULL,
                       binomial.response = F, count.response = F, variables, readcount.cutoff = 0, 
                       outlier.cutoff = 3, 
                       select.by = NULL, select = NULL, pdf = F, 
-                      min.prevalence = 0, min.abundance = 0, keep.result = F)
+                      min.prevalence = 0, min.abundance = 0, keep.result = F, k.value = 3.5,
+                      logtrans = F, relative = T)
 }
 
 \arguments{
@@ -58,8 +59,14 @@ Determines which value on the selection variable will be selected.
 Should be the result figure be printed as PDF? If yes, set to TRUE.
 }
 
-  \item{quartz}{
-Plot the results in quartz device.
+  \item{k.value}{
+Choose the k-value (penalty parameter) for AIC-based model reduction. The higher the value, the fewer variables will be left in the model.
+}
+  \item{logtrans}{
+Log-transform the microbiota data?
+}
+ \item{relative}{
+The data consist of relative abundances, i.e. have not been transformed into absolute abundances. This means the number of reads per sample will be used as an offset in the models.  TRUE or FALSE.
 }
   \item{keep.result}{
 Store the results as a list. The first item on the list is the response model, and the second item is a list of all the bacterial models. The resulting final best models can then be accessed and inspected by using the summary command. 

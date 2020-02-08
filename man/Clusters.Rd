@@ -9,7 +9,7 @@ Hierarchical clustering based on significant correlations between bacterial taxa
 \usage{
 Clusters(taxonomic.table, meta, N.taxa = NULL,  readcount.cutoff = 0,
                      minimum.correlation = 0.5, minimum.network = 1,
-                      select.by = NULL, select = NULL, keep.result = F, pdf = F)
+                      select.by = NULL, select = NULL, keep.result = F, pdf = F, relative = T)
 }
 
 \arguments{
@@ -42,6 +42,9 @@ Should the results be returned as an R object? TRUE or FALSE.
 }
 \item{pdf}{
 Should the figure be saved as pdf? TRUE or FALSE.
+}
+  \item{relative}{
+Use relative abundances? Default is TRUE. FALSE will use data as is.
 }
 }
 

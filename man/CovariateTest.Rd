@@ -19,19 +19,19 @@ CovariateTest(species.table=NULL, genus.table=NULL, family.table=NULL, order.tab
     meta, covariate, readcount.cutoff = 0, 
     confounders = NULL, subject.ID = NULL, outlier.cutoff = 3, p.cutoff = 0.05,
     group = NULL, select.by = NULL, select = NULL, pdf = F, 
-    min.prevalence = 0.1, min.abundance = 0, keep.result = F, nonzero = T)
+    min.prevalence = 0.1, min.abundance = 0, keep.result = F, nonzero = T, relative = T)
 
 GroupTest(species.table=NULL, genus.table=NULL, family.table=NULL, order.table=NULL, class.table=NULL, phylum.table=NULL, 
                       meta, group, compare.to = NULL, readcount.cutoff = 0, confounders = NULL, 
                       subject.ID = NULL, outlier.cutoff = 3, p.cutoff = 0.05, 
                       select.by = NULL, select = NULL, pdf = F,  min.prevalence = 0.1, min.abundance = 0, 
-                      label.direction = 1, keep.result = F, nonzero = T)
+                      label.direction = 1, keep.result = F, nonzero = T, relative = T)
     
 ChangeTest(species.table=NULL, genus.table=NULL, family.table=NULL, order.table=NULL, class.table=NULL, phylum.table=NULL, 
                       meta, group = NULL, compare.to = NULL, 
     covariate = NULL, readcount.cutoff = 0, confounders = NULL, subject.ID,  time,
     outlier.cutoff = 3, p.cutoff = 0.05, select.by = NULL, select = NULL, pdf = F, 
-    consecutive = T, min.prevalence = 0, min.abundance = 0, label.direction = 1, keep.result =F)  
+    consecutive = T, min.prevalence = 0, min.abundance = 0, label.direction = 1, keep.result = F, relative = T, logtrans = F)  
 }
 \arguments{
   \item{*.table}{
@@ -93,6 +93,9 @@ Return the results to the R session.
 }
   \item{nonzero}{
 Fit an extra model for each bacterial taxon, including only samples where the taxon is observed. TRUE or FALSE.
+}
+  \item{relative}{
+The data consist of relative abundances, i.e. have not been transformed into absolute abundances. This means the number of reads per sample will be used as an offset in the models.  TRUE or FALSE.
 }
 }
 

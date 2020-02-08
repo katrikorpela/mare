@@ -9,7 +9,7 @@ Calculates the correlations between bacterial taxa and selected variables in the
 \usage{
 CorrelationMap(taxonomic.table, meta, variables, select.by = NULL, 
                            selection = NULL,  outlier.cutoff = 3, readcount.cutoff = 0, 
-                           min.abundance = 0, min.prevalence = 0, pdf = F)
+                           min.abundance = 0, min.prevalence = 0, pdf = F, relative = T)
 }
 
 \arguments{
@@ -43,6 +43,9 @@ Minimum acceptable prevalence of taxa (proportion of all samples). Used with min
 }
 \item{pdf}{
 Should the figure be saved as pdf? If yes, specify TRUE.
+}
+  \item{relative}{
+Use relative abundances? Default is TRUE. FALSE will use data as is.
 }
 
 }
