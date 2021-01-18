@@ -24,8 +24,9 @@ library(nlme)
   if(length(class.table)>0) class <- read.delim(class.table) else class <- NA
   if(length(phylum.table)>0) phylum <- read.delim(phylum.table) else phylum <- NA
 
-  
+   if(min.prevalence<0.3) min.prevalence <- 0.3
   taxa <- data.frame(cbind(species,genus,family,order,class,phylum))
+  
    if (length(select.by) != 0) {
         meta$selection <- meta[, select.by]
         taxa <- taxa[meta$selection == select, ]
@@ -34,19 +35,26 @@ library(nlme)
   
   taxa <- taxa[,names(colSums(taxa)[!is.na(colSums(taxa))])]
   
-    colnames(genus)[grepl(pattern="incertae_sedis",x=colnames(genus))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(genus)[grepl(pattern="incertae_sedis",x=colnames(genus))])
-    colnames(genus)[grepl(pattern="Incertae_Sedis_",x=colnames(genus))] <-  gsub(pattern="_Incertae_Sedis_",replacement = "incertaesedis",x= colnames(genus)[grepl(pattern="Incertae_Sedis_",x=colnames(genus))])
-    colnames(genus)[grepl(pattern="Erysipelotrichi_",x=colnames(genus))] <-  gsub(pattern="Erysipelotrichi_",replacement = "Erysipelotrichia_",x= colnames(genus)[grepl(pattern="Erysipelotrichi_",x=colnames(genus))])
-
     colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))])
     colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))] <-  gsub(pattern="_Incertae_Sedis_",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))])
-    colnames(taxa)[grepl(pattern="Erysipelotrichi_",x=colnames(taxa))] <-  gsub(pattern="Erysipelotrichi_",replacement = "Erysipelotrichia_",x= colnames(taxa)[grepl(pattern="Erysipelotrichi_",x=colnames(taxa))])
+    #colnames(taxa)[grepl(pattern="Erysipelotrichi_",x=colnames(taxa))] <-  gsub(pattern="Erysipelotrichi_",replacement = "Erysipelotrichia_",x= colnames(taxa)[grepl(pattern="Erysipelotrichi_",x=colnames(taxa))])
 
- taxa <- taxa[, colSums(taxa/ meta$ReadCount > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
-       
-    if(ncol(taxa)==0) print("No taxa that fullfill the abundance and prevalence criteria!")
-    if(ncol(taxa)>0) {
+for(i in grep(pattern="_IncertaeSedis",x=colnames(taxa))){
+  colnames(taxa)[i] <- gsub(x=colnames(taxa)[i] ,pattern="_IncertaeSedis",fixed=T,
+replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strsplit(x=colnames(taxa)[i],split = "_")[[1]][5],sep=""))
+}
     
+for(i in grep(pattern="_incertaesedis",x=colnames(taxa))){
+  colnames(taxa)[i] <- gsub(x=colnames(taxa)[i] ,pattern="_incertaesedis",fixed=T,
+replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strsplit(x=colnames(taxa)[i],split = "_")[[1]][5],sep=""))
+}
+    
+for(i in grep(pattern="_uncultured",x=colnames(taxa))){
+  colnames(taxa)[i] <- gsub(x=colnames(taxa)[i] ,pattern="_uncultured",fixed=T,
+replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strsplit(x=colnames(taxa)[i],split = "_")[[1]][5],sep=""))
+}
+    
+
     taxa <- taxa[meta$ReadCount > readcount.cutoff, ]
     meta <- meta[meta$ReadCount > readcount.cutoff, ]
     
@@ -60,9 +68,16 @@ library(nlme)
                 sd(reltaxa[, i])
         }
     }
- taxa <- round(reltaxa * meta$ReadCount - 1)
+
+      
+      taxa <- round(reltaxa * meta$ReadCount - 1)
     taxa[taxa<0]<-0
     
+  taxa <- taxa[, colSums(taxa/ meta$ReadCount > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
+       
+    if(ncol(taxa)==0) print("No taxa that fullfill the abundance and prevalence criteria!")
+    if(ncol(taxa)>0) {   
+      
     dataset <- data.frame(meta, taxa)
     dataset[,group] <- as.character(dataset[,group])
     dataset <- dataset[!is.na(dataset[,group]),]
@@ -118,7 +133,7 @@ library(nlme)
                 admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)),
                 error = function(e) NULL)
          
-            if(length(model[[i]])==0){
+            if(length(model[[i]])==0|max(model[[i]]$b)==0){
                model[[i]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste("round(", 
                 i, "+1)~", confounders[1], "+", confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ", group, 
@@ -128,7 +143,7 @@ library(nlme)
                 error = function(e) NULL)
             }
            
-               if(length(model[[i]])==0){
+               if(length(model[[i]])==0|max(model[[i]]$b)==0){
                model[[i]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste("round(", 
                 i, ")~", confounders[1], "+", confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ", group, 
@@ -138,8 +153,8 @@ library(nlme)
                 error = function(e) NULL)
             }
              
-          if(length(model[[i]])==0){
-            if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.255){
+          if(length(model[[i]])==0|max(model[[i]]$b)==0){
+            if(abs(mean((modeldata[,i]+1)/modeldata$ReadCount)-median((modeldata[,i]+1)/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)<0.255){
            model[[i]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", confounders[1], "+", 
                                                              confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)),random = ~1 | ID,  data = modeldata2),
@@ -168,7 +183,7 @@ library(nlme)
           }
          } else {
            if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]<0.01){
-           if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.25){  
+           if(abs(mean((modeldata[,i]+1)/modeldata$ReadCount)-median((modeldata[,i]+1)/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)<0.25){  
              model[[i]] <- tryCatch(nlme::lme(as.formula(paste("(", i, "/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
@@ -185,7 +200,7 @@ library(nlme)
                 error = function(e) NULL)
            }
           } else {
-          if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.25){  
+          if(abs(mean((modeldata[,i]+1)/modeldata$ReadCount)-median((modeldata[,i]+1)/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)<0.25){  
             model[[i]] <- tryCatch(nlme::lme(as.formula(paste("(", i, "/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
@@ -209,7 +224,7 @@ library(nlme)
             for(j in intersect(levels(modeldata[,group]),gsub(rownames(summary(model[[i]])$tTable),pattern=group,replacement=""))){
             group_test[i, c(paste(j,"estimate",sep="_"),paste(j,"p",sep="_"))] <- summary(model[[i]])$tTable[paste(group,j,sep=""),c(1,5)]  }
           } else {
-             if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.25){  
+             if(abs(mean((modeldata[,i]+1)/modeldata$ReadCount)-median((modeldata[,i]+1)/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)<0.25){  
             model[[i]] <- tryCatch(nlme::lme(as.formula(paste("(", i, "/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
@@ -243,7 +258,7 @@ library(nlme)
      group_test[i, "model"] <- strsplit(as.character(summary(model[[i]])$call),split="(",fixed=T)[[1]][1] 
      
      if(group_test[i, "model"]== "lme.formula"){
-    if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)>0.24999){
+    if(abs(mean((modeldata[,i]+1)/modeldata$ReadCount)-median((modeldata[,i]+1)/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)>0.24999){
     group_test[i, "model"] <- paste("log",group_test[i, "model"])
      } 
      }
@@ -479,21 +494,21 @@ library(nlme)
                 error = function(e) NULL)   
              }
            }  
-     
+     if(length(model[[i]])>0){
           tmp <- data.frame(res = resid(model[[i]],type="pearson"), fitted = predict(model[[i]]))  
           tmp$resdev <- abs(tmp$res) 
           tmp$group <- modeldata[,group]
- 
+     
            if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]>0.1 & summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]>0.1 &
              anova(lm(res ~ group, data=tmp))$Pr[1]>0.1 & anova(lm(resdev ~ group, data=tmp))$Pr[1]>0.1){
           
             for(j in intersect(levels(modeldata[,group]),gsub(rownames(summary(model[[i]])$coef),pattern=group,replacement=""))){
             group_test[i, c(paste(j,"estimate",sep="_"),paste(j,"p",sep="_"))] <- summary(model[[i]])$coef[paste(group,j,sep=""),c(1,4)] }   
-          
+           
          } else {
            
           if(summary(lm(tmp$res ~ tmp$fitted))$coef[2,4]<0.01 | summary(lm(tmp$resdev ~ tmp$fitted))$coef[2,4]<0.01){
-           if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.25){   
+           if(abs(mean((modeldata[,i]+1)/modeldata$ReadCount)-median((modeldata[,i]+1)/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)<0.25){   
             model[[i]] <- tryCatch(nlme::gls(formula(paste("(", i, "/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
@@ -503,12 +518,12 @@ library(nlme)
              model[[i]] <- tryCatch(nlme::gls(formula(paste("log(", i, "/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
-                data = modeldata2, weights = nlme::varExp(), control = nlme::glsControl(maxIter=1000)),
+                data = modeldata2, weights = nlme::varExp(), control = nlme::glsControl(maxIter=5000)),
                 error = function(e) NULL) 
            }
              
           } else {
-            if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.25){   
+           if(abs(mean((modeldata[,i]+1)/modeldata$ReadCount)-median((modeldata[,i]+1)/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)<0.25){    
              model[[i]] <- tryCatch(nlme::gls(formula(paste("(", i, "/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
@@ -531,7 +546,7 @@ library(nlme)
             for(j in intersect(levels(modeldata[,group]),gsub(rownames(summary(model[[i]])$tTable),pattern=group,replacement=""))){
             group_test[i, c(paste(j,"estimate",sep="_"),paste(j,"p",sep="_"))] <- summary(model[[i]])$tTable[paste(group,j,sep=""),c(1,4)]}
           } else {
-           if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.25){     
+         if(abs(mean((modeldata[,i]+1)/modeldata$ReadCount)-median((modeldata[,i]+1)/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)<0.25){    
           model[[i]] <- tryCatch(nlme::gls(formula(paste("(", i, "/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
@@ -565,7 +580,7 @@ library(nlme)
     if(length(model[[i]])>0){
      group_test[i, "model"] <- strsplit(as.character(summary(model[[i]])$call),split="(",fixed=T)[[1]][1] 
      if(group_test[i, "model"]== "lm" | group_test[i, "model"]== "nlme::gls"){
-    if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)>0.24999){
+    if(abs(mean((modeldata[,i]+1)/modeldata$ReadCount)-median((modeldata[,i]+1)/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)>0.24999){
     group_test[i, "model"] <- paste("log",group_test[i, "model"])
      } 
      }
@@ -623,7 +638,7 @@ resids[,i] <-  tryCatch(resid(update(model[[i]], as.formula(paste(".~. -",group,
     
         }  
         }
-              
+        }        
 if(nonzero){       
   residsNonzero <- modeldata
   
@@ -759,17 +774,18 @@ if(nonzero){
             
  if(group_test_nonzero[i, "model"]== "MASS::glm.nb" |group_test_nonzero[i, "model"]== "glm"){     
   group_test_nonzero[i,paste(j,"estimate_FoldChange",sep="_")] <- exp(group_test_nonzero[i, paste(j,"estimate",sep="_")])
-         if(length(confounders[confounders!=""])>0){
- residsNonzero[,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep="")),
-                                      init.theta = 5, control = glm.control(epsilon = 1e-12, maxit = 2500, trace = FALSE)), type="pearson"),
-                               error = function(e) NA)
+       
+    if(length(confounders[confounders!=""])>0){
+try( residsNonzero[residsNonzero[,i]>0,i] <-  resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep="")),
+                                      init.theta = 5, control = glm.control(epsilon = 1e-12, maxit = 2500, trace = FALSE)), type="pearson"))#,
+                               #error = function(e) NA)
  if(is.na(sum(residsNonzero[,i]))){
-residsNonzero[,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep="")),
+residsNonzero[residsNonzero[,i]>0,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep="")),
                                       control = glm.control(epsilon = 1e-20, maxit = 1000, trace = FALSE)), type="pearson"),
                                error = function(e) NA)
    }
   if(is.na(sum(residsNonzero[,i]))){
-residsNonzero[,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep="")),
+residsNonzero[residsNonzero[,i]>0,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep="")),
                                        init.theta = 10,control = glm.control(epsilon = 1e-20, maxit = 2500, trace = FALSE)), type="pearson"),
                                error = function(e) NA)
    
@@ -778,28 +794,28 @@ residsNonzero[,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.form
    if(group_test_nonzero[i, "model"] == "nlme::gls"){     
         group_test_nonzero[i,paste(j,"estimate_FoldChange",sep="_")] <- mean(fitted(model[[paste(i,"nonzero")]])[modeldata$G==j&modeldata[,i]>0])/mean(fitted(model[[paste(i,"nonzero")]])[modeldata$G==compare.to&modeldata[,i]>0])#(summary(model[[paste(i,"nonzero")]])$tTable[1,1]+summary(model[[paste(i,"nonzero")]])$tTable[paste(group,j,sep=""),1])/summary(model[[paste(i,"nonzero")]])$tTable[1,1]
          if(length(confounders[confounders!=""])>0){
- residsNonzero[,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep=""))), type="pearson"),
+ residsNonzero[residsNonzero[,i]>0,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep=""))), type="pearson"),
                                error = function(e) NA)
          }   } 
         
                 if(group_test_nonzero[i, "model"] == "log nlme::gls"){     
         group_test_nonzero[i,paste(j,"estimate_FoldChange",sep="_")] <- mean(exp(fitted(model[[paste(i,"nonzero")]])[modeldata$G==j&modeldata[,i]>0]))/mean(exp(fitted(model[[paste(i,"nonzero")]])[modeldata$G==compare.to&modeldata[,i]>0]))#exp(summary(model[[paste(i,"nonzero")]])$tTable[1,1]+(summary(model[[paste(i,"nonzero")]])$tTable[paste(group,j,sep=""),1]))/exp(summary(model[[paste(i,"nonzero")]])$tTable[1,1])
          if(length(confounders[confounders!=""])>0){
- residsNonzero[,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep=""))), type="pearson"),
+ residsNonzero[residsNonzero[,i]>0,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep=""))), type="pearson"),
                                error = function(e) NA)
        }   } 
         
           if(group_test_nonzero[i, "model"] == "lm"){     
         group_test_nonzero[i,paste(j,"estimate_FoldChange",sep="_")] <-  mean(fitted(model[[paste(i,"nonzero")]])[modeldata$G==j&modeldata[,i]>0])/mean(fitted(model[[paste(i,"nonzero")]])[modeldata$G==compare.to&modeldata[,i]>0])#(summary(model[[paste(i,"nonzero")]])$coef[1,1]+summary(model[[paste(i,"nonzero")]])$coef[paste(group,j,sep=""),1])/summary(model[[paste(i,"nonzero")]])$coef[1,1]
            if(length(confounders[confounders!=""])>0){
- residsNonzero[,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep=""))), type="pearson"),
+ residsNonzero[residsNonzero[,i]>0,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep=""))), type="pearson"),
                                error = function(e) NA)
        }   } 
         
         if(group_test_nonzero[i, "model"] == "log lm"){     
         group_test_nonzero[i,paste(j,"estimate_FoldChange",sep="_")] <-    mean(exp(fitted(model[[paste(i,"nonzero")]])[modeldata$G==j&modeldata[,i]>0]))/mean(exp(fitted(model[[paste(i,"nonzero")]])[modeldata$G==compare.to&modeldata[,i]>0]))#(exp(summary(model[[paste(i,"nonzero")]])$coef[1,1]+summary(model[[paste(i,"nonzero")]])$coef[paste(group,j,sep=""),1]))/exp(summary(model[[paste(i,"nonzero")]])$coef[1,1])
              if(length(confounders[confounders!=""])>0){
- residsNonzero[,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep=""))), type="pearson"),
+ residsNonzero[residsNonzero[,i]>0,i] <-  tryCatch(resid(update(model[[paste(i,"nonzero")]], as.formula(paste(".~. -",group,sep=""))), type="pearson"),
                                error = function(e) NA)
              }  } 
         }
@@ -882,7 +898,7 @@ colnames(resids2)<-c(setdiff(colnames(resids),colnames(taxa)),setdiff(sig,sigNon
       
       
     dataset2 <- modeldata
-    dataset2[,names(taxa)]<-(100*((dataset2[,names(taxa)]+1)/dataset2$ReadCount))
+   if(relative) dataset2[,names(taxa)]<-(100*((dataset2[,names(taxa)]+1)/dataset2$ReadCount))
     if(nonzero) for(i in setdiff(sigNonzero,sig)) dataset2[modeldata[,i]==0,i] <- NA
     }
     
@@ -902,13 +918,21 @@ if(length(confounders[confounders!=""])>0){
 #------------
   if (length(sig) > 1) {  sig <-  na.omit(sig[apply(dataset2[,sig],MARGIN=2,FUN=sum,na.rm=T)!=0])}
    
+lphy <- length(sig)
+
+if(lphy < 5) {
+  ncols <- lphy
+  nrows <- 1
+} else {
+ncols <-  round(sqrt(lphy)) + 1
+nrows <-  floor(sqrt(lphy))
+}
+
    if(relative) yaxis <- round((100*c(0.0001,0.0005,0.001,0.005,0.01,0.05,0.1,0.5,1))) else yaxis <- round((seq(0,max(dataset[,sig]),max(dataset[,sig])/10)))
-   
+
         if (pdf) {
-            pdf(paste(group, compare.to, "_", select.by, select, "_Boxplot.pdf", sep = ""))
-   par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), 
-      mgp = c(2, 0.5, 0), mar = c(4, 3, 1, 0.5), tck = -0.01, 
-                cex.axis = 0.8, cex.lab = 1,cex.main=0.8)
+            pdf(width=ncols*3,height=nrows*3, paste(group, compare.to, "_", select.by, select, "_Boxplot.pdf", sep = ""))
+   par(mfrow = c(nrows, ncols),  mgp = c(2, 0.5, 0), mar = c(6, 2, 1, 0.5), tck = -0.01,  cex.axis = 0.8, cex.lab = 1,cex.main=0.8)
             for(i in sig[order(sig)]){
               if(length(confounders[confounders!=""])==0) {
               lab <- gsub(i,pattern="_NA",replacement = ".")  
@@ -927,13 +951,12 @@ if(length(confounders[confounders!=""])>0){
        outpch = 21, outbg = c("#E41A1C","orange","#377EB8","skyblue","#4DAF4A" ,"#984EA3", "#FF7F00" ,"#FFFF33", 
        "#A65628", "#F781BF", "#999999","blue","firebrick4",'yellowgreen','pink','turquoise2','plum','darkorange','lightyellow','gray',
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset2[, "G"]))])
-            #  if(length(confounders[confounders!=""])==0) { axis(side=2,at=yaxis,labels=exp(yaxis)) } else  axis(side=2)
-         }
+       }
           dev.off()
           
-           pdf(paste(group, compare.to, "_", select.by, select, "_Beanplot.pdf", sep = ""))
-                    par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), mgp = c(2, 0.5, 0), 
-               mar = c(4, 3, 1, 0.5), tck = -0.01, cex.axis = 0.8, cex.lab = 1,cex.main=0.8)
+           pdf(width=ncols*3,height=nrows*3, paste(group, compare.to, "_", select.by, select, "_Beanplot.pdf", sep = ""))
+                    par(mfrow = c(nrows, ncols), mgp = c(2, 0.5, 0), 
+               mar = c(6, 2, 1, 0.5), tck = -0.01, cex.axis = 0.8, cex.lab = 1,cex.main=0.8)
                for(i in sig[order(sig)]){
                 if(length(confounders[confounders!=""])==0) {
                 lab <- gsub(i,pattern="_NA",replacement = ".")  
@@ -965,14 +988,13 @@ if(length(confounders[confounders!=""])>0){
           c('lightyellow','black','black','black'),
           c('gray','black','black','black')),
                   border = "black"), error = function(e) NULL)
-              #   if(length(confounders[confounders!=""])==0) { axis(side=2,at=yaxis,labels=signif(exp(yaxis),digits=1)) } else  axis(side=2)
         } 
                     dev.off()
         }
  
        quartz()
-  par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), 
-      mgp = c(2, 0.5, 0), mar = c(4, 3, 1, 0.5), tck = -0.01, 
+  par(mfrow = c(nrows, ncols), 
+      mgp = c(2, 0.5, 0), mar = c(6, 2, 1, 0.5), tck = -0.01, 
                 cex.axis = 0.8, cex.lab = 1,cex.main=0.8)
             for(i in sig[order(sig)]){
               if(length(confounders[confounders!=""])==0) {
@@ -995,8 +1017,8 @@ if(length(confounders[confounders!=""])>0){
             #  if(length(confounders[confounders!=""])==0) { axis(side=2,at=yaxis,labels=exp(yaxis)) } else  axis(side=2)
          }
     quartz()
-                  par(mfrow = c(floor(sqrt(length(sig))), round(sqrt(length(sig))) + 1), mgp = c(2, 0.5, 0), 
-               mar = c(4, 3, 1, 0.5), tck = -0.01, cex.axis = 0.8, cex.lab = 1,cex.main=0.8)
+                  par(mfrow = c(nrows, ncols), mgp = c(2, 0.5, 0), 
+               mar = c(6, 2, 1, 0.5), tck = -0.01, cex.axis = 0.8, cex.lab = 1,cex.main=0.8)
                for(i in sig[order(sig)]){
                 if(length(confounders[confounders!=""])==0) {
                 lab <- gsub(i,pattern="_NA",replacement = ".")  
@@ -1031,118 +1053,7 @@ if(length(confounders[confounders!=""])>0){
               #   if(length(confounders[confounders!=""])==0) { axis(side=2,at=yaxis,labels=signif(exp(yaxis),digits=1)) } else  axis(side=2)
         } 
     
-  if(is.element("metacoder", installed.packages()[,1])){
-     library(metacoder)
 
-if(length(species.table)!=0){
-  sp <- colnames(species)
-} else{
- if(length(genus.table)!=0){
-   sp <- colnames(genus)
- } else{
-  if(length(family.table)!=0){
-    sp <- colnames(family)
-  } else{
-    if(length(order.table)!=0){
-      sp <- colnames(order)
-    } else{
-      if(length(class.table)!=0){
-        sp <- colnames(class)
-      } else sp <- colnames(phylum)
-    }
-  }
-}
-}
-
-
-   
-for(h in unique(dataset[,"G"])[unique(dataset[,"G"])!=compare.to & !is.na(unique(dataset[,"G"]))]){ 
-
-if(nonzero){  
-a <- group_test[!is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")])&group_test[,paste(h,"p",sep="_")]==group_test[,paste("nonzero",h,"p",sep="_")]|
-               !is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")])&group_test[,paste(h,"p",sep="_")]<group_test[,paste("nonzero",h,"p",sep="_")]|
-               !is.na(group_test[,paste(h,"p",sep="_")])&is.na(group_test[,paste("nonzero",h,"p",sep="_")]),c("taxon",paste(h,"estimate",sep="_"),paste(h,"p",sep="_"))]
-b <-  group_test[!is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")])&group_test[,paste(h,"p",sep="_")]>group_test[,paste("nonzero",h,"p",sep="_")]|
-               is.na(group_test[,paste(h,"p",sep="_")])&!is.na(group_test[,paste("nonzero",h,"p",sep="_")]),c("taxon",paste("nonzero",h,"estimate",sep="_"),paste("nonzero",h,"p",sep="_"))]
-names(b) <- names(a)
-group_test_summary <- rbind(a,b)
-} else {
-group_test_summary <- group_test[!is.na(group_test[,paste(h,"p",sep="_")]),c("taxon",paste(h,"estimate",sep="_"),paste(h,"p",sep="_"))]
-}
-  
-group_test_summary$name <- sapply(group_test_summary$taxon, function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
-rownames(group_test_summary)<-  group_test_summary$taxon
-group_test_summary[,paste(h,"estimate",sep="_")][group_test_summary[,paste(h,"p",sep="_")] > p.cutoff] <- 0
-group_test_summary2 <- group_test_summary[intersect(sp,rownames(group_test_summary)),]
-  
-seqs1 <- list()
-for(i in rownames(group_test_summary2)){
-  if(!is.na(group_test_summary2[i,paste(h,"p",sep="_")]))  if(group_test_summary2[i,paste(h,"p",sep="_")]<p.cutoff)  seqs1[[group_test_summary2[i,"taxon"]]]<- group_test_summary2[i,paste(h,"estimate",sep="_")]
-}
-
-for(i in rownames(group_test_summary2)){
-  if(!is.na(group_test_summary2[i,paste(h,"p",sep="_")]))  if(group_test_summary2[i,paste(h,"p",sep="_")]>p.cutoff) seqs1[[group_test_summary2[i,"taxon"]]]<- 0
-}
-
-abu <- list()
-for(i in names(seqs1)) abu[[i]] <-  mean(reltaxa[,i])
-
- if(length(intersect(colnames(phylum),sp))==length(sp)){newseqs2 <- paste("XX ", names(seqs1)," ",seqs1," ", abu, sep="")
- } else newseqs2 <- paste("XX Bacteria_", names(seqs1)," ",seqs1," ", abu, sep="")
-
-tmp2 <- tryCatch(extract_taxonomy(input=newseqs2, regex = "^(.*)\\ (.*)\\ (.*)\\ (.*)",
-                         key=c(id = "obs_info","class","taxon_info","taxon_info"),class_sep = "_"),error = function(e) NULL)
-
-for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)&tmp2$taxon_data$name!="NA"]){
-if(tmp2$taxon_data$name[as.numeric(k)]%in%group_test_summary$name) tmp2$taxon_data$taxon_info_1[as.numeric(k)] <- group_test_summary[group_test_summary$name==tmp2$taxon_data$name[as.numeric(k)],paste(h,"estimate",sep="_")][1]
-}
-for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_1)])){
- tmp2$taxon_data$taxon_info_1[as.numeric(k)] <-  mean(as.numeric(tmp2$taxon_data$taxon_info_1[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
-}
-tmp2$taxon_data$taxon_info_1[tmp2$taxon_data$name=="Bacteria"] <- 0
-
-treltaxa <- as.data.frame(t(reltaxa))
-treltaxa$name <-  sapply(rownames(treltaxa), function(x) strsplit(x, split="_")[[1]][length(strsplit(x, split="_")[[1]])])
-
-for(k in rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)]){
-if(tmp2$taxon_data$name[as.numeric(k)]%in%treltaxa$name) tmp2$taxon_data$taxon_info_2[as.numeric(k)] <- rowMeans(treltaxa[treltaxa$name==tmp2$taxon_data$name[as.numeric(k)],-ncol(treltaxa)][1,])
-}
-
-
-for(k in rev(rownames(tmp2$taxon_data)[is.na(tmp2$taxon_data$taxon_info_2)])){
- tmp2$taxon_data$taxon_info_2[as.numeric(k)] <-  sum(as.numeric(tmp2$taxon_data$taxon_info_2[!is.na(tmp2$taxon_data$supertaxon_ids)&tmp2$taxon_data$supertaxon_ids==tmp2$taxon_data$taxon_ids[as.numeric(k)]]),na.rm=T)
-}
-
-if(relative) {
-  lab <- "Average relative abundance (%)" 
-  x <- 100
-  } else {
-    lab <- "Average abundance"
-    x <- 1
-  }
-
-heat_tree(tmp2, node_size = as.numeric(taxon_info_2)*x, 
-                   node_label = ifelse(name == "NA", NA, name),
-                   node_color = as.numeric(taxon_info_1),
-                   node_color_range=c("#377EB8","gray95","red"),
-                   node_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
-                   edge_color_interval = c(-max(abs(as.numeric(tmp2$taxon_data$taxon_info_1))), max(abs(as.numeric(tmp2$taxon_data$taxon_info_1)))),
-                   node_color_axis_label = paste("Group",h,"compared to",compare.to),
-                   node_size_axis_label = lab,
-          node_label_size_range=c(0.01,0.015),
-          node_label_size_trans="ln",
-          initial_layout = "reingold-tilford",
-          layout = "davidson-harel",
-          overlap_avoidance = 1, node_label_max=150, make_legend=T, 
-          node_size_trans="linear",
-          node_size_range=c(0.01,0.04),
-          node_color_trans="linear",
-          title=paste("Differences between groups", h, "and", compare.to), title_size=0.03,
-          output_file=paste(group,h,"vs", compare.to, "_", select.by, select,"_HeatTree.pdf",sep=""))
-
-}
-
-}
 
      
      
