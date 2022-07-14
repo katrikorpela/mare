@@ -1,7 +1,7 @@
 GroupPlot <- function(taxa = NULL, group = NULL, taxonomic.table, meta, readcount.cutoff = 0, 
          stacked = T, bar = T, box = T, bean = T, covariate = NULL, 
          smooth.method ='loess',select.by = NULL, select = NULL, pdf = F, label.direction = 1, logtrans = F,
-         relative = T){
+         relative = T, group.labels = NULL){
 
   if(Sys.info()[['sysname']] == "Linux") {
   quartz <- function() {X11()}
@@ -29,7 +29,7 @@ spnames <- names(taxatable)
 
   meta <- read.delim(meta)
   if(logtrans) {
-  if(relative)  dataset <- data.frame(meta,((taxatable+1)/meta$ReadCount)*100) else dataset <- data.frame(meta,taxatable+1)
+  if(relative)  dataset <- data.frame(meta,((taxatable)/meta$ReadCount)*100) else dataset <- data.frame(meta,taxatable)
     } else if(relative) dataset <- data.frame(meta,((taxatable)/meta$ReadCount)*100) else dataset <- data.frame(meta,taxatable)
   dataset <- dataset[dataset$ReadCount>readcount.cutoff,]
   if (length(select.by)!=0){
@@ -95,33 +95,55 @@ plot(p)
 }
  
 if(stacked){
+if(length(group.labels)==0) group.labels <- levels(as.factor(dataset[,group]))
 
-if(length(taxa)> 20) inset <-  c(1,-0.4) else inset <- c(1,0) 
+
   
+if(relative){
+dataset$others <- 100-rowSums(dataset[,taxa])  
+#yl <- c(0,100)
+} else dataset$others <- dataset$ReadCount-rowSums(dataset[,taxa])
+
+if(length(taxa)> 20) {
+  inset <-  c(1,-0.4) 
+  ncols <- round(length(taxa)/20) 
+  } else {
+    inset <- c(1,0) 
+    ncols <- 1
+}
+ 
 if(pdf){
 pdf(width=picwidth,paste(strsplit(taxonomic.table, split = "_")[[1]][3],"_",group,"_", select.by,select, "Stackedplot.pdf", sep = ""))
 op<-par(xpd=T,mar=c(10,10,2,20),cex.axis=1.2,cex.lab=1.5,mgp=c(5,1,0))
-barplot(as.matrix(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1])),
-legend=T,args.legend=list(x="left",inset=inset,text.font=3,bty="n"),
-names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab="",
-col=c("#E41A1C","#FFA500","#377EB8","#87CEFA","#4DAF4A" ,'#9ACD32',"#984EA3",'#DA70D6', "#999999","gainsboro",
-      "#008080","#00CED1","#F781BF","thistle1","#8DA0CB","lightsteelblue1","#FFD92F","#FFFFB3",
-"#8DD3C7","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD",
-"#CCEBC5","#FFED6F","#C71585","#EE82EE","#66C2A5","#FC8D62","#A65628"),
+barplot(as.matrix(t(aggregate(dataset[,c(taxa,"others")],by=list(group=dataset[,group]),mean,na.rm=T)[,-1])),
+legend=T,args.legend=list(x="left",inset=inset,text.font=3,bty="n",ncol=ncols),ylim=c(0,100),
+names.arg=group.labels,las=label.direction,xlab="",
+col=c(c("#E41A1C","#FFA500","#377EB8","#87CEFA","#4DAF4A" ,'#9ACD32',"#984EA3",'#DA70D6', "#999999","gainsboro","saddlebrown","peru",
+      "#008080","#00CED1","#FFD92F","#FFFFB3","#F781BF","thistle1",
+       "#FB8072","#FDB462","#80B1D3","powderblue","palegreen3","darkseagreen1","#BC80BD","lavender",
+ "#D9D9D9","whitesmoke","tan","wheat2","paleturquoise3","paleturquoise1","khaki1","lightgoldenrodyellow",
+ "#FCCDE5","lavenderblush")[c(1:length(taxa))],"white"),
 ylab=ylabel)
 dev.off()
 par(op)}
-
+#"#CCEBC5","#FFED6F","#C71585",
 
 quartz()
 op<-par(xpd=T,mar=c(10,10,2,20),cex.axis=1.2,cex.lab=1.5,mgp=c(5,1,0))
 barplot(as.matrix(t(aggregate(dataset[,taxa],by=list(group=dataset[,group]),mean,na.rm=T)[,-1])),
-legend=T,args.legend=list(x="left",inset=inset,text.font=3,bty="n"),
-names.arg=levels(as.factor(dataset[,group])),las=label.direction,xlab="",
-col=c("#E41A1C","#FFA500","#377EB8","#87CEFA","#4DAF4A" ,'#9ACD32',"#984EA3",'#DA70D6', "#999999","gainsboro",
-      "#008080","#00CED1","#F781BF","thistle1","#8DA0CB","lightsteelblue1","#FFD92F","#FFFFB3",
-"#8DD3C7","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD",
-"#CCEBC5","#FFED6F","#C71585","#EE82EE","#66C2A5","#FC8D62","#A65628"),
+legend=T,args.legend=list(x="left",inset=inset,text.font=3,bty="n",ncol=ncols),
+#ylim=c(0,100),
+names.arg=group.labels,las=label.direction,xlab="",
+col=c("#E41A1C","#FFA500","#377EB8","#87CEFA","#4DAF4A" ,'#9ACD32',"#984EA3",'#DA70D6', "#999999","gainsboro","saddlebrown","peru",
+      "#008080","#00CED1","#FFD92F","#FFFFB3","#F781BF","thistle1",
+       "#FB8072","#FDB462","#80B1D3","powderblue","palegreen3","darkseagreen1","#BC80BD","lavender",
+ "#D9D9D9","whitesmoke","tan","wheat2","paleturquoise3","paleturquoise1","khaki1","lightgoldenrodyellow",
+ "#FCCDE5","lavenderblush"),
+
+##col=c("#E41A1C","#FFA500","#377EB8","#87CEFA","#4DAF4A" ,'#9ACD32',"#984EA3",'#DA70D6', "#999999","gainsboro",
+#      "#008080","#00CED1","#F781BF","thistle1","#8DA0CB","lightsteelblue1","#FFD92F","#FFFFB3",
+##"#8DD3C7","#FB8072","#80B1D3","#FDB462","#B3DE69","#FCCDE5","#D9D9D9","#BC80BD",
+#"#CCEBC5","#FFED6F","#C71585","#EE82EE","#66C2A5","#FC8D62","#A65628"),
 ylab=ylabel)
 
 } 

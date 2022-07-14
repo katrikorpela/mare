@@ -17,7 +17,7 @@ library(nlme)
   meta <- read.delim(meta)
   if(!relative) meta[,"ReadCount"]<-1
   
-   if(length(species.table)>0) species <- read.delim(species.table) else species <- NA
+  if(length(species.table)>0) species <- read.delim(species.table) else species <- NA
   if(length(genus.table)>0) genus <- read.delim(genus.table) else genus <- NA
   if(length(family.table)>0) family <- read.delim(family.table) else family <- NA
   if(length(order.table)>0) order <- read.delim(order.table) else order <- NA
@@ -37,7 +37,6 @@ library(nlme)
   
     colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))] <- gsub(pattern="_incertae_sedis",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="incertae_sedis",x=colnames(taxa))])
     colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))] <-  gsub(pattern="_Incertae_Sedis_",replacement = "incertaesedis",x= colnames(taxa)[grepl(pattern="Incertae_Sedis_",x=colnames(taxa))])
-    #colnames(taxa)[grepl(pattern="Erysipelotrichi_",x=colnames(taxa))] <-  gsub(pattern="Erysipelotrichi_",replacement = "Erysipelotrichia_",x= colnames(taxa)[grepl(pattern="Erysipelotrichi_",x=colnames(taxa))])
 
 for(i in grep(pattern="_IncertaeSedis",x=colnames(taxa))){
   colnames(taxa)[i] <- gsub(x=colnames(taxa)[i] ,pattern="_IncertaeSedis",fixed=T,
@@ -60,20 +59,27 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
     
    
     
-   reltaxa <- (1 + taxa)/meta$ReadCount
+   reltaxa <- (taxa)/meta$ReadCount
     for (i in names(reltaxa)) {
         for (j in 1:nrow(taxa)) {
-            reltaxa[j, i][reltaxa[j, i] > (mean(reltaxa[, i]) + outlier.cutoff * 
-                sd(reltaxa[, i]))] <- mean(reltaxa[, i]) + outlier.cutoff * 
-                sd(reltaxa[, i])
+            reltaxa[j, i][reltaxa[j, i] > (mean(reltaxa[, i]) + outlier.cutoff*sd(reltaxa[, i]))] <- mean(reltaxa[, i]) + 1.05*outlier.cutoff*sd(reltaxa[, i])
         }
     }
 
       
-      taxa <- round(reltaxa * meta$ReadCount - 1)
+    taxa <- round(reltaxa * meta$ReadCount)
     taxa[taxa<0]<-0
     
-  taxa <- taxa[, colSums(taxa/ meta$ReadCount > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
+    sel <- colSums(taxa > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)
+    
+    if(length(sel[sel==T])==1) {
+     taxa <- as.data.frame(taxa[,sel])
+      colnames(taxa)[1]<-names(sel[sel==T])
+    } else {
+      taxa <- taxa[, colSums(taxa > min.abundance, na.rm = T) > min.prevalence * nrow(taxa)]
+    }
+    
+  
        
     if(ncol(taxa)==0) print("No taxa that fullfill the abundance and prevalence criteria!")
     if(ncol(taxa)>0) {   
@@ -95,10 +101,6 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
       if(min(dataset[,i]) == max(dataset[,i]))dataset[,i] <- NA
      }
     
-    taxa <- taxa[,names(colSums(dataset[,-c(1:ncol(meta),ncol(dataset))])[!is.na(colSums(dataset[,-c(1:ncol(meta),ncol(dataset))]))])]
-    dataset <- data.frame(dataset[,c(1:ncol(meta),ncol(dataset))],
-                          dataset[,names(colSums(dataset[,-c(1:ncol(meta),ncol(dataset))])[!is.na(colSums(dataset[,-c(1:ncol(meta),ncol(dataset))]))])])
-
     
     confounders <- c(confounders, rep("", 5 - length(confounders)))
     group_test <- data.frame(array(dim = c(length(names(taxa)),length(c("taxon", paste(levels(dataset[,group])[-1],"estimate", sep = "_"),
@@ -135,7 +137,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
          
             if(length(model[[i]])==0|max(model[[i]]$b)==0){
                model[[i]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste("round(", 
-                i, "+1)~", confounders[1], "+", confounders[2], "+", confounders[3], 
+                i, ")~", confounders[1], "+", confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ", group, 
                 "+", "offset(log(ReadCount))")), random = ~1 | ID, family = "nbinom", 
                 data = modeldata, 
@@ -153,7 +155,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 error = function(e) NULL)
             }
              
-          if(length(model[[i]])==0|max(model[[i]]$b)==0){
+          if(length(model[[i]])==0|max(model[[i]]$b)==0 | model[[i]]$deviance/model[[i]]$df.residual > 1.4){
             if(abs(mean((modeldata[,i]+1)/modeldata$ReadCount)-median((modeldata[,i]+1)/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)<0.255){
            model[[i]] <- tryCatch(nlme::lme(as.formula(paste("((", i, ")/ReadCount)~", confounders[1], "+", 
                                                              confounders[2], "+", confounders[3], 
@@ -192,7 +194,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 error = function(e) NULL)
              
            } else {
-              model[[i]] <- tryCatch(nlme::lme(as.formula(paste("log(", i, "/ReadCount)~", confounders[1], "+", 
+              model[[i]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, ")/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata2, weights = nlme::varExp(),random = ~1 | ID,  
@@ -208,7 +210,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 random = ~1 | ID,  control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
           } else {
-               model[[i]] <- tryCatch(nlme::lme(as.formula(paste("log(", i, "/ReadCount)~", confounders[1], "+", 
+               model[[i]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, ")/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata2, weights = nlme::varIdent(form=as.formula(paste("~1|",group))),random = ~1 | ID,  control = nlme::glsControl(maxIter=1000)),
@@ -232,7 +234,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
              } else {
-             model[[i]] <- tryCatch(nlme::lme(as.formula(paste("log(", i, "/ReadCount)~", confounders[1], "+", 
+             model[[i]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, ")/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata2, random = ~1 | ID, 
@@ -303,7 +305,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
           
             if(length(model[[paste(i,"nonzero")]])==0){
                model[[i]] <- tryCatch(glmmADMB::glmmadmb(as.formula(paste("round(", 
-                i, "+1)~", confounders[1], "+", confounders[2], "+", confounders[3], 
+                i, ")~", confounders[1], "+", confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ", group, 
                 "+", "offset(log(ReadCount))")), random = ~1 | ID, family = "nbinom", 
                 data = modeldata[modeldata[,i]>0,], 
@@ -319,7 +321,11 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 data = modeldata[modeldata[,i]>0,], 
                 admb.opts = glmmADMB::admbControl(shess = F, noinit = FALSE)),
                 error = function(e) NULL)
-            }
+              }
+          
+             if(length(model[[paste(i,"nonzero")]])>0){
+                if(model[[paste(i,"nonzero")]]$deviance/model[[paste(i,"nonzero")]]$df.residual > 1.4) model[[paste(i,"nonzero")]] <- NULL
+              }
           
           if(length(model[[paste(i,"nonzero")]])==0){
             if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])<0.25){
@@ -357,7 +363,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 data = modeldata[modeldata[,i]>0,], weights = nlme::varExp(),random = ~1 | ID,  control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
            } else {
-              model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log(", i, "/ReadCount)~", confounders[1], "+", 
+              model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, ")/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata[modeldata[,i]>0,], weights = nlme::varExp(),random = ~1 | ID,  control = nlme::glsControl(maxIter=1000)),
@@ -373,7 +379,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
           } else {
-               model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log(", i, "/ReadCount)~", confounders[1], "+", 
+               model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, ")/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata[modeldata[,i]>0,], weights = nlme::varIdent(form=as.formula(paste("~1|",group))),
@@ -398,7 +404,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
              } else {
-             model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log(", i, "/ReadCount)~", confounders[1], "+", 
+             model[[paste(i,"nonzero")]] <- tryCatch(nlme::lme(as.formula(paste("log((", i, ")/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata[modeldata[,i]>0,], random = ~1 | ID, 
@@ -470,7 +476,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 data = modeldata, control = glm.control(maxit = 1000,epsilon=1e-12)),
                 error = function(e) NULL)
           if(length(model[[i]])==0){
-              model[[i]] <- tryCatch(MASS::glm.nb(formula(paste("round(", i, "+1)~", confounders[1], "+", confounders[2], "+", confounders[3], 
+              model[[i]] <- tryCatch(MASS::glm.nb(formula(paste("round(", i, ")~", confounders[1], "+", confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group,"+", "offset(log(ReadCount))")), 
                 data = modeldata, control = glm.control(maxit = 1000,epsilon=1e-12)),
                 error = function(e) NULL)
@@ -481,14 +487,14 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 data = modeldata,control = glm.control(maxit = 1000,epsilon=1e-12)),
                 error = function(e) NULL)
            }
-           if(length(model[[i]])==0){
-             if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median(modeldata[,i]/modeldata$ReadCount)<0.25){
-             model[[i]] <- tryCatch(lm(formula(paste("(", i, "+1)/ReadCount~", confounders[1], "+", confounders[2], "+", confounders[3], 
+           if(length(model[[i]])==0 | model[[i]]$deviance/model[[i]]$df.residual > 1.4){
+             if(abs(mean(modeldata[,i]/modeldata$ReadCount)-median(modeldata[,i]/modeldata$ReadCount))/median((modeldata[,i]+1)/modeldata$ReadCount)<0.25){
+             model[[i]] <- tryCatch(lm(formula(paste("(", i, ")/ReadCount~", confounders[1], "+", confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata),
                 error = function(e) NULL)   
              } else {
-               model[[i]] <- tryCatch(lm(formula(paste("log(", i, "+1)/ReadCount~", confounders[1], "+", confounders[2], "+", confounders[3], 
+               model[[i]] <- tryCatch(lm(formula(paste("log((", i, "+1)/ReadCount)~", confounders[1], "+", confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata),
                 error = function(e) NULL)   
@@ -515,7 +521,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 data = modeldata2, weights = nlme::varExp(), control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
            } else {
-             model[[i]] <- tryCatch(nlme::gls(formula(paste("log(", i, "/ReadCount)~", confounders[1], "+", 
+             model[[i]] <- tryCatch(nlme::gls(formula(paste("log((", i, ")/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata2, weights = nlme::varExp(), control = nlme::glsControl(maxIter=5000)),
@@ -530,7 +536,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 data = modeldata2, weights = nlme::varIdent(form = formula(paste(" ~1|",group))), control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
             } else(
-              model[[i]] <- tryCatch(nlme::gls(formula(paste("log(", i, "/ReadCount)~", confounders[1], "+", 
+              model[[i]] <- tryCatch(nlme::gls(formula(paste("log((", i, ")/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata2, weights = nlme::varIdent(form = formula(paste(" ~1|",group))), control = nlme::glsControl(maxIter=1000)),
@@ -555,7 +561,7 @@ replacement = paste("_",strsplit(x=colnames(taxa)[i],split = "_")[[1]][4],strspl
                 control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
            } else{
-              model[[i]] <- tryCatch(nlme::gls(formula(paste("log(", i, "/ReadCount)~", confounders[1], "+", 
+              model[[i]] <- tryCatch(nlme::gls(formula(paste("log((", i, ")/ReadCount)~", confounders[1], "+", 
                    confounders[2], "+", confounders[3], 
                 "+", confounders[4], "+", confounders[5], "+ ",group)), 
                 data = modeldata2, weights = nlme::varComb(nlme::varExp(),nlme::varIdent(form = formula(paste(" ~1|",group)))), 
@@ -652,7 +658,7 @@ if(nonzero){
                 data = modeldata[modeldata[,i]>0,], control = glm.control(maxit = 1000)),
                 error = function(e) NULL)
           if(length(model[[paste(i,"nonzero")]])==0){
-              model[[paste(i,"nonzero")]] <- tryCatch(MASS::glm.nb(as.formula(paste("round(", i, "+1)~", confounders2[1], "+", confounders2[2], "+", confounders2[3], 
+              model[[paste(i,"nonzero")]] <- tryCatch(MASS::glm.nb(as.formula(paste("round(", i, ")~", confounders2[1], "+", confounders2[2], "+", confounders2[3], 
                 "+", confounders2[4], "+", confounders2[5], "+ ",group,"+", "offset(log(ReadCount))")), 
                 data = modeldata[modeldata[,i]>0,], control = glm.control(maxit = 1000)),
                 error = function(e) NULL)
@@ -662,21 +668,26 @@ if(nonzero){
                 "+", confounders[4], "+", confounders[5], "+ ",group,"+", "offset(log(ReadCount))")), family=poisson,
                 data = modeldata[modeldata[,i]>0,]),
                 error = function(e) NULL)
-           }
+              }
+             
+              if(length(model[[paste(i,"nonzero")]])>0){
+                if(model[[paste(i,"nonzero")]]$deviance/model[[paste(i,"nonzero")]]$df.residual > 1.4) model[[paste(i,"nonzero")]] <- NULL
+              }
+             
            if(length(model[[paste(i,"nonzero")]])==0){
              if(abs(mean(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])-median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0]))/median(modeldata[modeldata[,i]>0,i]/modeldata$ReadCount[modeldata[,i]>0])<1){
-             model[[paste(i,"nonzero")]] <- tryCatch(lm(as.formula(paste("(", i, "+1)/ReadCount~", confounders2[1], "+", confounders2[2], "+", confounders2[3], 
+             model[[paste(i,"nonzero")]] <- tryCatch(lm(as.formula(paste("(", i, ")/ReadCount~", confounders2[1], "+", confounders2[2], "+", confounders2[3], 
                 "+", confounders2[4], "+", confounders2[5], "+ ",group)), 
                 data = modeldata[modeldata[,i]>0,]),
                 error = function(e) NULL)   
              } else {
-               model[[paste(i,"nonzero")]] <- tryCatch(lm(as.formula(paste("log(", i, "+1)/ReadCount~", confounders2[1], "+", confounders2[2], "+", confounders2[3], 
+               model[[paste(i,"nonzero")]] <- tryCatch(lm(as.formula(paste("log((", i, ")/ReadCount)~", confounders2[1], "+", confounders2[2], "+", confounders2[3], 
                 "+", confounders2[4], "+", confounders2[5], "+ ",group)), 
                 data = modeldata[modeldata[,i]>0,]),
                 error = function(e) NULL)   
              }
            }  
-     
+           
           tmp <- data.frame(res = resid(model[[paste(i,"nonzero")]],type="pearson"), fitted = predict(model[[paste(i,"nonzero")]]))  
           tmp$resdev <- abs(tmp$res) 
           tmp$group <- modeldata[modeldata[,i]>0,group]
@@ -699,7 +710,7 @@ if(nonzero){
                 data = modeldata[modeldata[,i]>0,], weights = nlme::varExp(), control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
            } else {
-             model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log(", i, "/ReadCount)~", confounders2[1], "+", 
+             model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, ")/ReadCount)~", confounders2[1], "+", 
                    confounders2[2], "+", confounders2[3], 
                 "+", confounders2[4], "+", confounders2[5], "+ ",group)), 
                 data = modeldata[modeldata[,i]>0,], weights = nlme::varExp(), control = nlme::glsControl(maxIter=1000)),
@@ -714,7 +725,7 @@ if(nonzero){
                 data = modeldata[modeldata[,i]>0,], weights = nlme::varIdent(form = as.formula(paste(" ~1|",group))), control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
             } else(
-              model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log(", i, "/ReadCount)~", confounders2[1], "+", 
+              model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, ")/ReadCount)~", confounders2[1], "+", 
                    confounders2[2], "+", confounders2[3], 
                 "+", confounders2[4], "+", confounders2[5], "+ ",group)), 
                 data = modeldata[modeldata[,i]>0,], weights = nlme::varIdent(form = as.formula(paste(" ~1|",group))), control = nlme::glsControl(maxIter=1000)),
@@ -739,7 +750,7 @@ if(nonzero){
                 control = nlme::glsControl(maxIter=1000)),
                 error = function(e) NULL)
            } else{
-              model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log(", i, "/ReadCount)~", confounders2[1], "+", 
+              model[[paste(i,"nonzero")]] <- tryCatch(nlme::gls(as.formula(paste("log((", i, ")/ReadCount)~", confounders2[1], "+", 
                    confounders2[2], "+", confounders2[3], 
                 "+", confounders2[4], "+", confounders2[5], "+ ",group)), 
                 data = modeldata[modeldata[,i]>0,], weights = nlme::varComb(nlme::varExp(),nlme::varIdent(form = as.formula(paste(" ~1|",group)))), 
@@ -1016,42 +1027,42 @@ nrows <-  floor(sqrt(lphy))
        'royalblue','olivedrab4','red','turquoise4','purple','darkorange3','lightyellow4','black')[1:length(unique(dataset2[, "G"]))])
             #  if(length(confounders[confounders!=""])==0) { axis(side=2,at=yaxis,labels=exp(yaxis)) } else  axis(side=2)
          }
-    quartz()
-                  par(mfrow = c(nrows, ncols), mgp = c(2, 0.5, 0), 
-               mar = c(6, 2, 1, 0.5), tck = -0.01, cex.axis = 0.8, cex.lab = 1,cex.main=0.8)
-               for(i in sig[order(sig)]){
-                if(length(confounders[confounders!=""])==0) {
-                lab <- gsub(i,pattern="_NA",replacement = ".")  
-                lab <- strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])]
-                if(length(lab)==0) lab <- "Unassigned taxa"
-                } else {
-                  lab <- gsub(i,pattern="_NA",replacement = ".")  
-                  lab <- paste(strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])],"deviance")
-                  if(lab==" deviance") lab <- "Unassigned taxa deviance"
-                  }
-              tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, "G"], xlab="", las = label.direction,#yaxt="n",
-                  ll = 0.1, ylab = "", main=lab, beanlines="median",   col=list(c('#E41A1C','black','black','black'),
-         c('orange','black','black','black'),
-          c('#377EB8','black','black','black'),
-          c('skyblue','black','black','black'),
-          c("#4DAF4A",'black','black','black'),
-          c('#984EA3','black','black','black'),
-          c('#FFFF33','black','black','black'),
-         c('#A65628','black','black','black'),
-         c('#F781BF','black','black','black'),
-         c('#999999','black','black','black'),
-          c('blue','black','black','black'),
-          c('firebrick4','black','black','black'),
-          c('yellowgreen','black','black','black'),
-          c('pink','black','black','black'),
-          c('turquoise2','black','black','black'),
-          c('plum','black','black','black'),
-          c('darkorange','black','black','black'),
-          c('lightyellow','black','black','black'),
-          c('gray','black','black','black')),
-                  border = "black"), error = function(e) NULL)
-              #   if(length(confounders[confounders!=""])==0) { axis(side=2,at=yaxis,labels=signif(exp(yaxis),digits=1)) } else  axis(side=2)
-        } 
+  #  quartz()
+  #                par(mfrow = c(nrows, ncols), mgp = c(2, 0.5, 0), 
+  #             mar = c(6, 2, 1, 0.5), tck = -0.01, cex.axis = 0.8, cex.lab = 1,cex.main=0.8)
+  #             for(i in sig[order(sig)]){
+  #              if(length(confounders[confounders!=""])==0) {
+  #              lab <- gsub(i,pattern="_NA",replacement = ".")  
+  #              lab <- strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])]
+  #              if(length(lab)==0) lab <- "Unassigned taxa"
+  #              } else {
+  #                lab <- gsub(i,pattern="_NA",replacement = ".")  
+  #                lab <- paste(strsplit(lab, split = "_", fixed = T)[[1]][length(strsplit(lab, split = "_", fixed = T)[[1]])],"deviance")
+  #                if(lab==" deviance") lab <- "Unassigned taxa deviance"
+  #                }
+  #            tryCatch(beanplot::beanplot(dataset2[, i] ~ dataset2[, "G"], xlab="", las = label.direction,#yaxt="n",
+  #                ll = 0.1, ylab = "", main=lab, beanlines="median",   col=list(c('#E41A1C','black','black','black'),
+  #       c('orange','black','black','black'),
+  #        c('#377EB8','black','black','black'),
+  #        c('skyblue','black','black','black'),
+  #        c("#4DAF4A",'black','black','black'),
+  #        c('#984EA3','black','black','black'),
+  #        c('#FFFF33','black','black','black'),
+  #       c('#A65628','black','black','black'),
+  #       c('#F781BF','black','black','black'),
+  #       c('#999999','black','black','black'),
+  #        c('blue','black','black','black'),
+  #        c('firebrick4','black','black','black'),
+  #        c('yellowgreen','black','black','black'),
+  #        c('pink','black','black','black'),
+  #        c('turquoise2','black','black','black'),
+  #        c('plum','black','black','black'),
+  #        c('darkorange','black','black','black'),
+  #        c('lightyellow','black','black','black'),
+  #        c('gray','black','black','black')),
+  #                border = "black"), error = function(e) NULL)
+  #            #   if(length(confounders[confounders!=""])==0) { axis(side=2,at=yaxis,labels=signif(exp(yaxis),digits=1)) } else  axis(side=2)
+  #      } 
     
 
 
